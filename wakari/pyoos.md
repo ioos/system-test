@@ -2,6 +2,8 @@ To build pyoos environment on wakari:
 ```
 conda create --name pyoos --file pyoos.spec
 ```
+https://github.com/ioos/system-test/blob/master/wakari/pyoos.spec
+
 then: 
 ```
 source activate pyoos
