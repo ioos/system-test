@@ -2,4 +2,4 @@
 
 * PYOOS environment:  https://github.com/ioos/system-test/blob/master/wakari/pyoos.md
 
-* BLOG environment: https://github.com/ioos/system-test/blob/master/wakari/blog.md
+* BLOG environment: https://github.com/rsignell-usgs/blog/blob/master/wakari.md
