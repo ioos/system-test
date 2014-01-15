@@ -20,10 +20,15 @@ conda create --name blog --file blog.spec
 ```
 
 
-* Activate the `blog` environment and clone my blog repository from github:  
+* Activate the `blog` environment:  
 ```
 source activate blog
-git clone https://github.com/rsignell-usgs/blog.git
+```
+
+* Go to https://github.com/rsignell-usgs/blog and click the `fork` button to fork my blog repository.
+* In Wakari, clone your blog repository from github, for example:
+```
+git clone https://github.com/dpsnowden/blog.git
 ```
 
 * You should now have a $HOME/blog/blog directory.
