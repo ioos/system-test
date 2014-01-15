@@ -25,3 +25,6 @@ conda create --name blog --file blog.spec
 source activate blog
 git clone https://github.com/rsignell-usgs/blog.git
 ```
+
+* You should now have a $HOME/blog/blog directory.
+* See if pandoc is working by typing `which pandoc` and see if it returns `/opt/anaconda/bin/pandoc`
