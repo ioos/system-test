@@ -1,3 +1,5 @@
+#Creating your own PYOOS environment on Wakari
+
 To build your own `pyoos` environment on Wakari, first create a `conda` environment with all the 
 necessary conda packages. You can do this by loading an existing conda "spec" file, which is just a text file list of packages.  Here's mine:  https://github.com/ioos/system-test/blob/master/wakari/pyoos.spec
 
