@@ -9,9 +9,9 @@ more packages than is strictly needed for the blog -- I made it by typing in my 
 source activate blog
 conda list -e | tee blog.spec
 ```
-So here's what you type in Wakari to replicate this environment. 
+##Recipe
 
-First load the conda packages:
+* Create the `blog` environment with the necessary conda packages:
 ```
 mkdir $HOME/blog
 cd $HOME/blog
@@ -20,7 +20,7 @@ conda create --name blog --file blog.spec
 ```
 
 
-then clone my blog environment from github:  
+* Activate the `blog` environment and clone my blog repository from github:  
 ```
 source activate blog
 git clone https://github.com/rsignell-usgs/blog.git
