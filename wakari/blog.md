@@ -33,3 +33,12 @@ git clone https://github.com/dpsnowden/blog.git
 
 * You should now have a $HOME/blog/blog directory.
 * See if pandoc is working by typing `which pandoc` and see if it returns `/opt/anaconda/bin/pandoc`
+* Edit the `pelicanconf.py` and `publishconf.py` files and customize for your settings. 
+* Edit the ./octopress-theme/templates/_includes/{about.html, twitter.html} files and customize for your settings.
+
+* Create a SSH keypair to use for pushing from Wakari to Github pages:
+* Add the SSH public key $HOME/.ssh/id_rsa.pub in your Github user settings
+* Add lines to `$HOME\.bashrc` to start SSH agent
+* New notebooks go in `$HOME\blog\blog\content\downloads\notebooks`
+* Create a new markdown file in `$HOME\blog\blog\content that points to the new notebook
+* In the directory `$HOME\blog\blog`, type `make github` to convert notebooks to html and push to gh-pages
