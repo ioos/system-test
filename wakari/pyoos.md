@@ -9,7 +9,7 @@ more packages than is strictly needed for pyoos -- I made it by typing in my Wak
 source activate pyoos
 conda list -e | tee pyoos.spec
 ```
-So here's what you type in Wakari to replicate this environment. 
+So here's what you type in Wakari's shell terminal to replicate this environment. 
 
 First load the conda packages:
 ```
