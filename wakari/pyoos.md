@@ -18,19 +18,22 @@ cd $HOME/pyoos-env
 wget https://raw2.github.com/ioos/system-test/master/wakari/pyoos.spec
 conda create --name pyoos --file pyoos.spec
 ```
-
-
-then clone the paegan and pyoos packages and install using pip:
+Activate the pyoos environment:
 ```
 source activate pyoos
+```
+
+
+Then install the paegan and pyoos packages using pip:
+```
+pip install -e git+https://github.com/asascience-open/paegan.git#egg=paegan
+pip install -e git+https://github.com/asascience-open/pyoos.git#egg=pyoos
+```
+
+(Or, install paegan and pyoos using a git clone fallback method):
+```
 git clone https://github.com/asascience-open/paegan.git
 pip install -e ./paegan
 git clone https://github.com/asascience-open/pyoos.git
 pip install -e ./pyoos
 ```
-
-NOTE: For some reason I got errors when I tried to install directly from github (e.g. 
-```
-git clone git+https://github.com/asascience-open/paegan.git
-```
-hence the approach above.
