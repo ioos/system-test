@@ -1,4 +1,4 @@
-Building Pyoos as a Conda package on Wakari
+##Building Pyoos as a Conda package on Wakari
 
 From Ian Stokes-Rees at Continuum:
 It is definitely possible to build conda recipes within Wakari. To do so, you'll need the "conda-build" package in your "root" env. This can be installed by doing:
