@@ -44,3 +44,6 @@ At the end of all this, there is now a conda package available for linux-64 that
 ```
 conda install -c ijstokes pyoos
 ```
+To get Ian's recipe, install his bundle by clicking the green button at:
+https://www.wakari.io/sharing/bundle/ijstokes/pyoos-recipe
+ Copy this directory into the "pyoos" directory (at the same level as setup.py) with the name "conda.recipe" then build the package with "conda build conda.recipe" :
