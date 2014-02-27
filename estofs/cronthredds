@@ -1,0 +1,42 @@
+#####################################################################################
+# File Name: cronthredds
+# Location: $HOME04YC/ftp ($HOME04YC on lnxapp04 -- 10.111.56.56)
+# Abstract: This is the thredds server cron file. It is used to automate the scripts that
+# acquire, prepare, and store ocean/storm surge model data
+# Usage: crontab $HOME04YC/cronthredds
+# Technical Contact: Yi Chen, NOS/CSDL, 301-713-2809 x120, yi.chen@noaa.gov
+# Original Author: Zack Bronder, NOS/CSDL
+#                  John Kelley, NOS/CSDL
+# Revisions:
+#      Date          Name       Description
+#      2013-05-28    Y Chen     Create cronthredds from the template of cronodaas
+#####################################################################################
+#
+# Set HOME04YC path variables
+HOME04YC=/home/yi.chen.lx
+FTPDIR=/home/yi.chen.lx/ftp
+TOOLSDIR=/home/yi.chen.lx/ftp/tools
+SCRIPTSDIR=/home/yi.chen.lx/ftp/scripts
+LOGDIR=/home/yi.chen.lx/ftp/execlog
+DATADIR='/opt/thredds/data'
+#
+# ---------------------------- Model Output -----------------------------------------
+# NWS NCEP Extratropical Surge and Tide OFS for the Atlantic (ESTOFS Atlantic) 
+#
+59 05 * * *  $SCRIPTSDIR/estofs/estofs_00z.sh > $LOGDIR/estofs/get_estofs_00z.log 2>&1
+59 11 * * *  $SCRIPTSDIR/estofs/estofs_06z.sh > $LOGDIR/estofs/get_estofs_06z.log 2>&1
+59 17 * * *  $SCRIPTSDIR/estofs/estofs_12z.sh > $LOGDIR/estofs/get_estofs_12z.log 2>&1
+59 23 * * *  $SCRIPTSDIR/estofs/estofs_18z.sh > $LOGDIR/estofs/get_estofs_18z.log 2>&1
+#
+# ---------------------------- Daily Status Check -----------------------------------
+# Check disk quota of /opt; Delete data and logs that are 31 days old
+#
+01 00 * * * $SCRIPTSDIR/daily-check/thredds-daily-check.sh > $LOGDIR/status/`date -u +\%Y\%m\%d`-THREDDS-daily-check.txt 2>&1
+#
+# ---------------------------- Generate catalog.tree --------------------------------
+# Run every 15 minutes to generate/update the "catalog.tree" file (needed by AdcircViz)
+*/15 * * * * $SCRIPTSDIR/thredds/catalog-tree-gen.sh > $LOGDIR/thredds/catalog-tree-gen.txt
+#00 * * * * $SCRIPTSDIR/thredds/catalog-tree-gen.sh > $LOGDIR/thredds/catalog-tree-gen.txt
+#15 * * * * $SCRIPTSDIR/thredds/catalog-tree-gen.sh > $LOGDIR/thredds/catalog-tree-gen.txt
+#30 * * * * $SCRIPTSDIR/thredds/catalog-tree-gen.sh > $LOGDIR/thredds/catalog-tree-gen.txt
+#45 * * * * $SCRIPTSDIR/thredds/catalog-tree-gen.sh > $LOGDIR/thredds/catalog-tree-gen.txt

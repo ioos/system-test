@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<catalog name="ocs-s-lnxapp04 THREDDS Server Catalog"
+        xmlns="http://www.unidata.ucar.edu/namespaces/thredds/InvCatalog/v1.0"
+        xmlns:xlink="http://www.w3.org/1999/xlink">
+
+  <service name="all" base="" serviceType="compound">
+    <service name="odap" serviceType="OpenDAP" base="/thredds/dodsC/" />
+    <service name="http" serviceType="HTTPServer" base="/thredds/fileServer/" />
+    <!--service name="wcs" serviceType="WCS" base="/thredds/wcs/" /-->
+    <!--service name="wms" serviceType="WMS" base="/thredds/wms/" /-->
+    <!--service name="ncss" serviceType="NetcdfSubset" base="/thredds/ncss/grid/" /-->
+  </service>
+
+  <datasetRoot path="all" location="content/thredds/public/alldata/" />
+
+  <catalogRef xlink:title="ESTOFS Output" xlink:href="ESTOFSCatalog.xml" name=""/>
+
+  <catalogRef xlink:title="ASGS Output" xlink:href="ASGSCatalog.xml" name=""/>
+
+</catalog>

@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<catalog xmlns="http://www.unidata.ucar.edu/namespaces/thredds/InvCatalog/v1.0" xmlns:xlink="http://www.w3.org/1999/xlink"
+   name="Unidata THREDDS-IDD NetCDF-OpenDAP Server" version="1.0.1">
+
+  <service name="both" serviceType="Compound" base="">
+    <service name="ncdods" serviceType="OPENDAP" base="/thredds/dodsC/"/>
+    <service name="HTTPServer" serviceType="HTTPServer" base="/thredds/fileServer/"/>
+  </service>
+
+  <dataset name="ESTOFS Model Data">
+    <metadata inherited="true">
+      <serviceName>both</serviceName>
+      <authority>noaa.gov</authority>
+      <dataType>Grid</dataType>
+      <dataFormat>NetCDF</dataFormat>
+      <documentation type="Summary">Extratropical Surge and Tide Operational Forecast System (ESTOFS): The ESTOFS model is running four times daily out to 180 hours (6-hr nowcast followed by 180-hr forecast) producing numerical storm surge guidance for extratropical systems. ESTOFS uses the unstructured grid ADvanced CIRCulation model (ADCIRC). The unstructured grid of ESTOFS Atlantic (ESTOFS for the Western North Atlantic domain) uses the East Coast 2001 tidal database (EC2001) grid version 2e; consisting of 254,565 nodes. Coastal resolution generally averages about 3~5 km. Specifies the tidal boundary forcing at 60 degree W.</documentation>
+      <documentation xlink:href="http://nomads.ncep.noaa.gov/txt_descriptions/ESTOFS_doc.shtml" xlink:title="NCEP ESTOFS documentation"/>
+      <documentation type="Summary">estofs.atl.{cycle}.points.cwl.nc -- Six-minute combined water level at observation; estofs.atl.{cycle}.points.htp.nc -- Six-minute harmonic tidal prediciton at observation stations; and estofs.atl.{cycle}.fields.cwl.nc -- Hourly combined water level on native grid.</documentation>
+      <documentation xlink:href="http://www.opc.ncep.noaa.gov/estofs/estofs_surge_info.shtml" xlink:title="OPC ESTOFS Storm Surge Model Guidance (0-96 Hour Forecasts)"></documentation>
+      <documentation type="Rights">The data is provided free of charge, without warranty of any kind.</documentation>
+      <creator>
+        <name vocabulary="DIF">CSDL/MMAP - NCEP/EMC</name>
+        <contact url="http://www.ncep.noaa.gov/mail_liaison/" email="yuji.funakoshi@noaa.gov"/>
+      </creator>
+      <publisher>
+        <name vocabulary="DIF">CSDL/MMAP</name>
+        <contact email="yi.chen@noaa.gov"/>
+      </publisher>
+      <timeCoverage>
+        <end>present</end>
+        <duration>31 days</duration>
+      </timeCoverage>
+    </metadata>
+
+    <datasetScan name="ESTOFS Daily Data" ID="dailyESTOFS"
+                 path="dailyESTOFS" location="content/alldata/estofs"
+                 harvest="true">
+      <metadata inherited="true">
+        <variables vocabulary="">
+          <variable name="time" vocabulary_name="" units="s" vocabulary_id="">model time (standard_name: time), seconds since base_date</variable>
+          <variable name="station_name" vocabulary_name="" units="" vocabulary_id="">station name</variable>
+          <variable name="x" vocabulary_name="" units="degrees_east" vocabulary_id="">longitude (standard_name: longitude), degrees_east, positive=east</variable>
+          <variable name="y" vocabulary_name="" units="degrees_north" vocabulary_id="">latitude (standard_name: latitude), degrees_north, positive north</variable>
+          <variable name="element" vocabulary_name="" units="nondimensional" vocabulary_id="">element number</variable>
+          <variable name="neta" vocabulary_name="" units="nondimensional" vocabulary_id="">total number of elevation specified boundary nodes</variable>
+          <variable name="nvdll" vocabulary_name="" units="nondimensional" vocabulary_id="">number of nodes in each elevation specified boundary segment</variable>
+          <variable name="max_nvdll" vocabulary_name="" units="nondimensional" vocabulary_id="">max nvdll</variable>
+          <variable name="ibtypee" vocabulary_name="" units="nondimensional" vocabulary_id="">elevation boundary type</variable>
+          <variable name="nbdv" vocabulary_name="" units="nondimensional" vocabulary_id="">node numbers on each elevation specified boundary segment</variable>
+          <variable name="nvel" vocabulary_name="" units="nondimensional" vocabulary_id="">total number of normal flow specified boundary nodes including both the front and back nodes on internal barrier boundaries</variable>
+          <variable name="nvell" vocabulary_name="" units="nondimensional" vocabulary_id="">number of nodes in each normal flow specified boundary segment</variable>
+          <variable name="max_nvell" vocabulary_name="" units="nondimensional" vocabulary_id="">max nvell</variable>
+          <variable name="ibtype" vocabulary_name="" units="nondimensional" vocabulary_id="">type of normal flow (discharge) boundary</variable>
+          <variable name="nbvv" vocabulary_name="" units="nondimensional" vocabulary_id="">node numbers on normal flow boundary segment</variable>
+          <variable name="depth" vocabulary_name="" units="m" vocabulary_id="">distance from geoid (standard_name: depth), positive=down</variable>
+          <variable name="zeta" vocabulary_name="" units="m" vocabulary_id="">water surface elevation above geoid (standard_name: water_surface_elevation), positive=up, FillValue=-99999.)</variable>
+        </variables>
+      </metadata>
+
+      <filter>
+        <include wildcard="estofs*.nc" />
+      </filter>
+      <addID/>
+      <sort>
+        <lexigraphicByName increasing="true"/>
+      </sort>
+      <addLatest/>
+      <addDatasetSize/>
+    </datasetScan>
+
+
+    <datasetScan name="ESTOFS Historical Data" ID="HistoricalESTOFS"
+                 path="historicalESTOFS" location="content/alldata/estofs_historical"
+                 harvest="true">
+      <metadata inherited="true">
+        <documentation type="Caution">No guarantee to include all historical data</documentation>
+      </metadata>
+      <filter>
+        <include wildcard="estofs*.nc" />
+      </filter>
+      <addID/>
+      <sort>
+        <lexigraphicByName increasing="false"/>
+      </sort>
+      <addLatest/>
+      <addDatasetSize/>
+    </datasetScan>
+
+  </dataset>
+</catalog>
