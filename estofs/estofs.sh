@@ -103,6 +103,11 @@ CURRENTDIR=$ESTOFSDATADIR'/recent'
 #
 HOST='ftpprd.ncep.noaa.gov'
 NCEPESTOFSDIR='/pub/data/nccf/com/estofs/prod/estofs.'$YYYY$MM$DD
+
+# RPS
+STAGE_DIR='/pub/data/nccf/com/estofs/stagedir'
+AGG_DIR='/pub/data/nccf/com/estofs/aggdir'
+NTIME=6
 #
 echo '  ESTOFS script directory:' $ESTOFSSCRIPTSDIR
 echo ' '
@@ -183,6 +188,10 @@ chmod 755 $ESTOFSymddir
 FILE1='estofs.atl.'$CC'.fields.cwl.nc'
 FILE2='estofs.atl.'$CC'.points.cwl.nc'
 FILE3='estofs.atl.'$CC'.points.htp.nc'
+#RPS
+FILE_AGG='estofs.atl.'$YYYY$MM$DD$HH'.fields.cwl.nc'
+FILE_LATEST='estofs.atl.9999'$MM$DD$HH'.fields.cwl.nc'
+#end RPS
 #
 # Use recent directory to temporally store ESTOFS model data
 mkdir -p $CURRENTDIR
@@ -222,12 +231,20 @@ echo 'Finished ftping from NCEP computer...'
 #
 CURRENTDIRDOMAIN=$CURRENTDIR
 cd $CURRENTDIRDOMAIN
-ls -l
+ls -ltr
 #
 # ________________________________________________________
 #
-ls -ltr
-#
+# RPS clipping for aggregation
+# copy file clipped at last cycle from stage directory to agg directory
+cp $STAGE_DIR/$FILE_AGG $AGG_DIR/$FILE_AGG
+# remove full forecast from agg directory
+rm $AGG_DIR/*9999*.nc
+# place new full forcast in agg directory
+cp $FILE1 $AGG_DIR/$FILE_LATEST
+# create new clipped file, but save to stage directory
+$SCRIPTSDIR/estofs/clip.sh  $FILE1 $NTIME $STAGE_DIR/$FILE_AGG
+# end RPS
 echo ' Copy data to its destination directory and rename with date'
 cp $FILE1 $ESTOFSymddir/$FILE1
 cp $FILE2 $ESTOFSymddir/$FILE2
