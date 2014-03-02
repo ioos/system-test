@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<catalog xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.unidata.ucar.edu/namespaces/thredds/InvCatalog/v1.0 http://www.unidata.ucar.edu/schemas/thredds/InvCatalog.1.0.3.xsd"
+  xmlns="http://www.unidata.ucar.edu/namespaces/thredds/InvCatalog/v1.0"
+  xmlns:xlink="http://www.w3.org/1999/xlink" name="CDSL ESTOFS Catalog">
+  <service name="allServices" serviceType="Compound" base="">
+    <service name="ncdods" serviceType="OPENDAP" base="/thredds/dodsC/"/>
+ <!--   <service name="iso" serviceType="ISO" base="/thredds/iso/"/>
+    <service name="ncml" serviceType="NCML" base="/thredds/ncml/"/>
+    <service name="uddc" serviceType="UDDC" base="/thredds/uddc/"/>-->
+  </service>
+
+  <dataset name="ESTOFS Surge Model Forecast Aggregations">
+    <metadata inherited="true">
+      <serviceName>allServices</serviceName>
+      <creator>
+        <name vocabulary="DIF">Dr. Yuji Funakoshi</name>
+        <contact url="https://nsd.rdc.noaa.gov/nsd/search" email="yuji.funakoshi@noaa.gov"/>
+      </creator>
+      <documentation xlink:href="http://www.opc.ncep.noaa.gov/estofs/estofs_surge_info.shtml"
+        xlink:title="ESTOFS Storm Surge Model Guidance"/>
+      
+      <documentation type="Summary"> ESTOFS ATLANTIC V1.0.0 
+        2D Storm Surge Model using the ADCIRC modeling system with 85 hour forecasts updated every 6 hours.  
+        Driven by NAM 12km resolution winds </documentation>
+      <documentation type="Rights">  The data is provided free of charge, without warranty of any kind.  Not to be used for navigation.
+      </documentation>
+    </metadata>
+
+    <dataset name="ESTOFS Atlantic" ID="estofs/atlantic" urlPath="estofs/atlantic">
+      <netcdf xmlns="http://www.unidata.ucar.edu/namespaces/netcdf/ncml-2.2">
+        <attribute name="id" value="estofs/atlantic/1.1.0"/>
+        <attribute name="title" value="ESTOFS Storm Surge Model ATLANTIC V1.0.0 NCEP - ADCIRC"/>
+        <attribute name="summary"
+          value="ESTOFS ATLANTIC V1.0.0 2D Storm Surge Model using the ADCIRC modeling system with 85 hour forecasts updated every 6 hours.  Driven by NAM 12km resolution winds"/>
+        <remove type="attribute" name="convention"/>
+        <attribute name="Conventions" value="UGRID-0.9"/>
+        <variable name="time" shape="time" type="double">
+          <attribute name="units" value="seconds since 2012-12-19 00:00:00 -00:00"/>
+        </variable>
+        <variable name="adcirc_mesh" shape="" type="int">
+          <attribute name="node_coordinates" value="x y"/>
+          <attribute name="face_node_connectivity" value="element"/>
+          <attribute name="cf_role" value="mesh_topology"/>
+          <attribute name="topology_dimension" type="int" value="2"/>
+        </variable>
+        <variable name="element" shape="nele nvertex" type="int">
+          <attribute name="units" value="1"/>
+          <attribute name="start_index" type="int" value="1"/>
+          <attribute name="cf_role" value="face_node_connectivity"/>
+        </variable>
+        <variable name="depth" shape="node" type="double">
+          <attribute name="coordinates" value="x y"/>
+          <attribute name="units" value="m"/>
+          <remove type="attribute" name="positive"/>
+        </variable>
+        <variable name="zeta" shape="time node" type="double">
+          <attribute name="standard_name" value="sea_surface_height_above_geoid"/>
+          <attribute name="coordinates" value="time x y"/>
+          <attribute name="location" value="node"/>
+          <attribute name="mesh" value="adcirc_mesh"/>
+          <attribute name="coverage_content_type" value="modelResult"/>
+          <remove type="attribute" name="positive"/>
+        </variable>
+        <aggregation dimName="time" type="joinExisting" recheckEvery="15 min">
+          <scan location="/usgs/data2/rsignell/estofs/agg_dir"
+            regExp=".*estofs.atl.*\.fields\.cwl\.nc$" subdirs="false"/>
+        </aggregation>
+      </netcdf>
+    </dataset>
+  </dataset>
+</catalog>

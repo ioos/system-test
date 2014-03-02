@@ -105,8 +105,10 @@ HOST='ftpprd.ncep.noaa.gov'
 NCEPESTOFSDIR='/pub/data/nccf/com/estofs/prod/estofs.'$YYYY$MM$DD
 
 # RPS
-STAGE_DIR='/pub/data/nccf/com/estofs/stagedir'
-AGG_DIR='/pub/data/nccf/com/estofs/aggdir'
+STAGE_DIR='/pub/data/nccf/com/estofs/stage_dir'
+AGG_DIR='/pub/data/nccf/com/estofs/agg_dir'
+echo 'stage_dir:'$STAGE_DIR
+echo 'agg_dir:'$AGG_DIR
 NTIME=6
 #
 echo '  ESTOFS script directory:' $ESTOFSSCRIPTSDIR
@@ -236,14 +238,14 @@ ls -ltr
 # ________________________________________________________
 #
 # RPS clipping for aggregation
-# copy file clipped at last cycle from stage directory to agg directory
-cp $STAGE_DIR/$FILE_AGG $AGG_DIR/$FILE_AGG
+# move file clipped at last cycle from stage directory to agg directory
+mv $STAGE_DIR/*.nc $AGG_DIR
 # remove full forecast from agg directory
 rm $AGG_DIR/*9999*.nc
-# place new full forcast in agg directory
+# place new full forecast in agg directory
 cp $FILE1 $AGG_DIR/$FILE_LATEST
-# create new clipped file, but save to stage directory
-$SCRIPTSDIR/estofs/clip.sh  $FILE1 $NTIME $STAGE_DIR/$FILE_AGG
+# call NCKS to clip 1st $NTIME steps out of file and put in stage directory
+/usr/local/ncks -O -F -d time,1,$NTIME $FILE1 $STAGE_DIR/$FILE_AGG
 # end RPS
 echo ' Copy data to its destination directory and rename with date'
 cp $FILE1 $ESTOFSymddir/$FILE1
