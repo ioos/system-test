@@ -1,6 +1,6 @@
 # Custom Wakari environments that facilitate the system-test
 
-To install packages on Wakari, first check to see if a conda package is available at binstar.org.  
+To install packages on Wakari, first check to see if a conda package is available at http://binstar.org.  
 Search for the package name, then click on the `Conda` tab to narrow the results down to conda packages only.
 Binstar will show you the install instructions.
 
