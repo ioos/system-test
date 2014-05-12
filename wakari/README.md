@@ -15,7 +15,7 @@ So to build a complete environment for the system-test on Wakari, do this:
 ```
 conda create -n ioos_np18py27 python=2.7 numpy=1.8 pandas matplotlib netcdf4 ipython ipython-notebook scipy
 source activate ioos_np18py27
-conda install -c rsignell pyoos iris ulmo
+conda install -c rsignell pyoos iris ulmo owslib
 ```
 
 If you are interesting in blogging with Ipython notebooks on Wakari, check this out:
