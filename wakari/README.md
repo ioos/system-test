@@ -10,9 +10,17 @@ Here are some:
 * IRIS  :  `conda install -c rsignell iris`
 * ULMO : `conda install -c rsignell ulmo`
 
-So to build a complete environment for the system-test on Wakari, do this:
+So to build a complete environment for the system-test on Wakari, bring up a shell terminal, activate the environment you want to add the IOOS packages to, and install `pyoos iris ulmo owslib` from rsignell's binstar channel.  So the terminal session might look like this:
 
 ```
+source activate np18py27-1.9
+conda install -c rsignell pyoos iris ulmo owslib
+```
+
+Make sure you export the `UDUNITS2` environment variable following the instructions you will see when you install iris.
+
+Creating a custom environment instead of installing into an existing environment as below **should** work, but currently doesn't.  We are investigating.  So don't do this:
+``` 
 conda create -n ioos_np18py27 python=2.7 numpy=1.8 pandas matplotlib netcdf4 ipython ipython-notebook scipy
 source activate ioos_np18py27
 conda install -c rsignell pyoos iris ulmo owslib
