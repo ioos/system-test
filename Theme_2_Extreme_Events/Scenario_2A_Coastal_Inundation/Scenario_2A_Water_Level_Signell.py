@@ -303,6 +303,9 @@ zoom = 8
 extent = [box[0], box[2], box[1], box[3]]
 ax.set_extent(extent, geodetic)
 ax.add_image(tiler, zoom)
+
+# <codecell>
+
 ax.scatter(obs_lon, obs_lat, marker='o', s=30,
            color='cyan', transform=ccrs.PlateCarree())
 geodetic_transform = ccrs.Geodetic()._as_mpl_transform(ax)
