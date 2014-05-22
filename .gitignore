@@ -1,0 +1,6 @@
+*.html
+*.pyc
+*.sublime-*
+*.ipynb_checkpoints
+*-checkpoint.ipynb
+*.db
