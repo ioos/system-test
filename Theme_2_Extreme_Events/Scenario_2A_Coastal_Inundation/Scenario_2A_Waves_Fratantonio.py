@@ -108,23 +108,11 @@ or_filt = fes.Or([fes.PropertyIsLike(propertyname='apiso:AnyText',literal=('*%s*
 val = 'Averages'
 not_filt = fes.Not([fes.PropertyIsLike(propertyname='apiso:AnyText',literal=('*%s*' % val),
                         escapeChar='\\',wildCard='*',singleChar='?')])
-
-# <codecell>
-
 filter_list = [fes.And([ bbox, start, stop, or_filt, not_filt]) ]
 # connect to CSW, explore it's properties
 # try request using multiple filters "and" syntax: [[filter1,filter2]]
 csw.getrecords2(constraints=filter_list,maxrecords=1000,esn='full')
-for rec,item in csw.records.iteritems():
-    print item.title
-
-# <markdowncell>
-
-# Print all the records (should you want to)
-
-# <codecell>
-
-print "\n".join(csw.records)
+print str(len(csw.records)) + " csw records found"
 
 # <markdowncell>
 
@@ -137,7 +125,7 @@ dap_urls = service_urls(csw.records)
 dap_urls = sorted(set(dap_urls))
 print "Total DAP:",len(dap_urls)
 #print the first 5...
-print "\n".join(dap_urls[:])
+print "\n".join(dap_urls[1:5])
 
 # <markdowncell>
 
@@ -221,11 +209,8 @@ obs_loc_df.head()
 # <codecell>
 
 stations = [sta.split(':')[-1] for sta in obs_loc_df['station_id']]
-print stations
-obs_lon = [sta for sta in obs_loc_df['longitude (degree)']]
-obs_lat = [sta for sta in obs_loc_df['latitude (degree)']]
-print obs_lon
-print obs_lat
+#obs_lon = [sta for sta in obs_loc_df['longitude (degree)']]
+#obs_lat = [sta for sta in obs_loc_df['latitude (degree)']]
 
 # <headingcell level=3>
 
@@ -255,13 +240,12 @@ def coops2df(collector, coops_id, sos_name):
 
 ts_rng = pd.date_range(start=start_date, end=end_date)
 ts = pd.DataFrame(index=ts_rng)
-print start_date, end_date
+
 Hs_obs_df = []
 Tp_obs_df = []
 
 for sta in stations:
     b=coops2df(collector, sta, sos_name)
-    print b.name
     # limit interpolation to 10 points (10 @ 6min = 1 hour)
     Hs_obs_df.append(pd.DataFrame(pd.concat([b, ts],axis=1)['Observed Wave Height Data']))
     Hs_obs_df[-1].name=b.name
