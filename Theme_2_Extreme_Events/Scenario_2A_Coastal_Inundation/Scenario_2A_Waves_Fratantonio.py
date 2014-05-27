@@ -280,7 +280,8 @@ for n in range(len(obs_loc_df)):
     if len(Hs_obs_df[n]) > min_data_pts:
         map.simple_marker([lat, lon], popup=popup_string)
     else:
-        popup_string += '<br>No Data Available'
+        #popup_string += '<br>No Data Available'
+        popup_string += '<br>Not enough data available<br>requested pts: ' + str(min_data_pts ) + '<br>Available pts: ' + str(len(Hs_obs_df[n]))
         map.circle_marker([lat, lon], popup=popup_string, fill_color='#ff0000', radius=10000, line_color='#ff0000')
 
 map.line(get_coordinates(bounding_box,bounding_box_type), line_color='#FF0000', line_weight=5)
