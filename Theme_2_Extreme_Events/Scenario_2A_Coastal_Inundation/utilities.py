@@ -17,6 +17,7 @@ except ImportError:
 
 # Scientific stack.
 import numpy as np
+from IPython.display import HTML
 from pandas import DataFrame, concat, read_csv
 
 # Custom IOOS/ASA modules (available at PyPI).
@@ -175,7 +176,7 @@ def ind2ij(a, index):
 
 
 def get_coordinates(bounding_box, bounding_box_type):
-    #create bounding box coordinates for the map
+    """Create bounding box coordinates for the map."""
     coordinates = []
     if bounding_box_type is "box":
         coordinates.append([bounding_box[0][1], bounding_box[0][0]])
@@ -184,3 +185,14 @@ def get_coordinates(bounding_box, bounding_box_type):
         coordinates.append([bounding_box[1][1], bounding_box[0][0]])
         coordinates.append([bounding_box[0][1], bounding_box[0][0]])
         return coordinates
+
+
+def inline_map(m):
+    """From http://nbviewer.ipython.org/gist/rsignell-usgs/
+    bea6c0fe00a7d6e3249c."""
+    m._build_map()
+    srcdoc = m.HTML.replace('"', '&quot;')
+    embed = HTML('<iframe srcdoc="{srcdoc}" '
+                 'style="width: 100%; height: 500px; '
+                 'border: none"></iframe>'.format(srcdoc=srcdoc))
+    return embed
