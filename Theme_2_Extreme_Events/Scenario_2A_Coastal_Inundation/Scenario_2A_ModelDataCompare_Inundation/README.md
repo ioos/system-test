@@ -1,8 +1,10 @@
-# IOOS System Test - Theme 2 - Exteme Events
+# IOOS System Test - Theme 2 - Extreme Events
 
 ## Scenario 2A - Coastal Inundation
 
-### Requirements
+### Model Data Comparison - Inundation
+
+#### Requirements
 
 1. Using `pip`
     ```bash
@@ -23,7 +25,7 @@
     conda install -n yourenvname -c https://conda.binstar.org/rsignell iris=v1.6.2_RPS
     ```
 
-### Helper methods
+#### Helper methods
 
 Some helper functions have been abstracted into the file called `utilities.py`
 so the IPython notebook can maintain a certain degree of readability.
