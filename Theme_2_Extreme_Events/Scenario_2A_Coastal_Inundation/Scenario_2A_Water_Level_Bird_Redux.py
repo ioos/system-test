@@ -7,7 +7,22 @@
 
 # <markdowncell>
 
-# ### Can we estimate the return period of a water level by comparing modeled and/or observed water levels with NOAA exceedance probability plots?
+# ### Can we estimate the return period of a water level by comparing modeled and/or observed water levels with NOAA exceeding probability plots?
+
+# <markdowncell>
+
+# Methodology:
+# 
+# * Define temporal and spatial bounds of interest, as well as parameters of interest
+# * Search for available service endpoints in the NGDC CSW catalog, then inform the user of the DAP (model) and SOS (observation) services endpoints available
+# * Obtain the stations in the spatial boundaries, and processed to obtain observation data for temporal constraints, identifying the yearly max
+# * Plot observation stations on a map and indicate to the user if the minimum number of years has been met for extreme value analysis (red marker if condition is false)
+# * Using DAP (model) endpoints find all available models data sets that fall in the area of interest, for the specified time range, and extract a model grid cell closest all the given station locations (**Still in Development**)
+# * Plot the extracted model grid cell from each available model on to the map
+# * Plot the annual max for each station as a timeseries plot
+# * Perform extreme value analysis for a selected station identifying the return period and compare to NOAA tides and currents plot for one of the same stations
+# 
+# Estimated Time To Process Notebook: --.--
 
 # <headingcell level=4>
 
@@ -15,98 +30,84 @@
 
 # <codecell>
 
-import matplotlib.pyplot as plt
-from pylab import *
-import sys
-import csv
-import json
-from scipy.stats import genextreme
-import scipy.stats as ss
-import numpy as np
+from datetime import datetime
 
-from owslib.csw import CatalogueServiceWeb
-from owslib import fes
-import random
+import requests  # Required for the processing of requests.
+
+import folium  # Required for leaflet mapping.
 import netCDF4
-import pandas as pd
-import datetime as dt
+import numpy as np
+import prettyplotlib as ppl
+import scipy.stats as stats
+import matplotlib.pyplot as plt
+from IPython.display import Image
+
+from owslib import fes
+from shapely.geometry import Point  # For lat lon points.
+from owslib.csw import CatalogueServiceWeb
 from pyoos.collectors.coops.coops_sos import CoopsSos
-import cStringIO
-import iris
-import urllib2
-import parser
-from lxml import etree       #TODO suggest using bs4 instead for ease of access to XML objects
 
-#generated for csw interface
-#from date_range_formatter import dateRange  #date formatter (R.Signell)
-import requests              #required for the processing of requests
-from utilities import * 
+from utilities import (get_Coops_longName, dateRange, get_coordinates,
+                       service_urls, inline_map)
 
-from IPython.display import HTML
-import folium #required for leaflet mapping
+%matplotlib inline  
 
 # <markdowncell>
 
-# some functions from [Rich Signell Notebook](http://nbviewer.ipython.org/github/rsignell-usgs/notebook/blob/fef9438303b49a923024892db1ef3115e34d8271/CSW/IOOS_inundation.ipynb)
+# Some functions from [Rich Signell Notebook](http://nbviewer.ipython.org/github/rsignell-usgs/notebook/blob/fef9438303b49a923024892db1ef3115e34d8271/CSW/IOOS_inundation.ipynb)
 
 # <headingcell level=4>
 
-# Speficy Temporal and Spatial conditions
+# Specify Temporal and Spatial conditions.
 
 # <codecell>
 
-#bounding box of interest,[bottom right[lat,lon], top left[lat,lon]]
-bounding_box_type = "box" 
-bounding_box = [[-70.94,40.67],[-68.94,41.5]]
+# Bounding box of interest,[bottom right[lat,lon], top left[lat,lon]].
+bounding_box_type = "box"
+bounding_box = [[-75.94, 38.67],
+                [-66.94, 41.5]]
 
-#temporal range
-start_date = dt.datetime(1991,5,1).strftime('%Y-%m-%d %H:00')
-end_date = dt.datetime(2014,5,7).strftime('%Y-%m-%d %H:00')
-time_date_range = [start_date,end_date]  #start_date_end_date
+# Temporal range.
+start_date = datetime(1980, 5, 1).strftime('%Y-%m-%d %H:00')
+end_date = datetime(2014, 5, 1).strftime('%Y-%m-%d %H:00')
+time_date_range = [start_date, end_date]
 
-print start_date,'to',end_date
+print('%s to %s' % (start_date, end_date))
+
+# Number of years required for analysis, obs and model data.
+num_years_required = 30
 
 # <codecell>
 
-name_list=['water_surface_height_above_reference_datum',
-    'sea_surface_height_above_geoid','sea_surface_elevation',
-    'sea_surface_height_above_reference_ellipsoid','sea_surface_height_above_sea_level',
-    'sea_surface_height','water level']
+name_list = ['water level',
+             'sea_surface_height',
+             'sea_surface_elevation',
+             'sea_surface_height_above_geoid',
+             'sea_surface_height_above_sea_level',
+             'water_surface_height_above_reference_datum',
+             'sea_surface_height_above_reference_ellipsoid']
 
 sos_name = 'water_surface_height_above_reference_datum'
 
 # <codecell>
 
-endpoint = 'http://www.ngdc.noaa.gov/geoportal/csw' # NGDC Geoportal
-csw = CatalogueServiceWeb(endpoint,timeout=60)
+endpoint = 'http://www.ngdc.noaa.gov/geoportal/csw'  # NGDC Geoportal.
+csw = CatalogueServiceWeb(endpoint, timeout=60)
 
 for oper in csw.operations:
     if oper.name == 'GetRecords':
-        print '\nISO Queryables:\n',oper.constraints['SupportedISOQueryables']['values']
-        #pass
-        
-#put the names in a dict for ease of access 
+        print('\nISO Queryables:\n%s' %
+              '\n'.join(oper.constraints['SupportedISOQueryables']['values']))
+
+# Put the names in a dict for ease of access.
 data_dict = {}
-data_dict["water"] = {"names":['water_surface_height_above_reference_datum',
-    'sea_surface_height_above_geoid','sea_surface_elevation',
-    'sea_surface_height_above_reference_ellipsoid','sea_surface_height_above_sea_level',
-    'sea_surface_height','water level'], "sos_name":['water_surface_height_above_reference_datum']}      
+data_dict["water"] = {"names": name_list,
+                      "sos_name": sos_name}
 
 # <codecell>
 
-def dateRange(start_date='1900-01-01',stop_date='2100-01-01',constraint='overlaps'):
-    if constraint == 'overlaps':
-        start = fes.PropertyIsLessThanOrEqualTo(propertyname='apiso:TempExtent_begin', literal=stop_date)
-        stop = fes.PropertyIsGreaterThanOrEqualTo(propertyname='apiso:TempExtent_end', literal=start_date)
-    elif constraint == 'within':
-        start = fes.PropertyIsGreaterThanOrEqualTo(propertyname='apiso:TempExtent_begin', literal=start_date)
-        stop = fes.PropertyIsLessThanOrEqualTo(propertyname='apiso:TempExtent_end', literal=stop_date)
-    return start,stop
-
-# <codecell>
-
-# convert User Input into FES filters
-start,stop = dateRange(start_date,end_date)
+# Convert User Input into FES filters.
+start, stop = dateRange(start_date, end_date)
 box = []
 box.append(bounding_box[0][0])
 box.append(bounding_box[0][1])
@@ -114,84 +115,81 @@ box.append(bounding_box[1][0])
 box.append(bounding_box[1][1])
 bbox = fes.BBox(box)
 
-or_filt = fes.Or([fes.PropertyIsLike(propertyname='apiso:AnyText',literal=('*%s*' % val),
-                    escapeChar='\\',wildCard='*',singleChar='?') for val in name_list])
+or_filt = fes.Or([fes.PropertyIsLike(propertyname='apiso:AnyText',
+                                     literal=('*%s*' % val),
+                                     escapeChar='\\',
+                                     wildCard='*',
+                                     singleChar='?') for val in name_list])
 val = 'Averages'
-not_filt = fes.Not([fes.PropertyIsLike(propertyname='apiso:AnyText',literal=('*%s*' % val),
-                        escapeChar='\\',wildCard='*',singleChar='?')])
+not_filt = fes.Not([fes.PropertyIsLike(propertyname='apiso:AnyText',
+                                       literal=('*%s*' % val),
+                                       escapeChar='\\',
+                                       wildCard='*',
+                                       singleChar='?')])
 
 # <codecell>
 
-filter_list = [fes.And([ bbox, start, stop, or_filt, not_filt]) ]
+filter_list = [fes.And([bbox, start, stop, or_filt, not_filt])]
 # connect to CSW, explore it's properties
 # try request using multiple filters "and" syntax: [[filter1,filter2]]
-csw.getrecords2(constraints=filter_list,maxrecords=1000,esn='full')
+csw.getrecords2(constraints=filter_list,
+                maxrecords=1000,
+                esn='full')
 
 # <codecell>
 
-def service_urls(records,service_string='urn:x-esri:specification:ServiceType:odp:url'):
-    """
-    extract service_urls of a specific type (DAP, SOS) from records
-    """
-    urls=[]
-    for key,rec in records.iteritems():
-        #create a generator object, and iterate through it until the match is found
-        #if not found, gets the default value (here "none")
-        url = next((d['url'] for d in rec.references if d['scheme'] == service_string), None)
-        if url is not None:
-            urls.append(url)
-    return urls
-
-# <codecell>
-
-#print records that are available
-print "number of datasets available: ",len(csw.records.keys())
+# Print records that are available:
+print("number of datasets available: %s" % len(csw.records.keys()))
 
 # <markdowncell>
 
-# Print all the records (should you want too)
+# Print all the records (should you want too).
 
 # <codecell>
 
-#print "\n".join(csw.records)
+# print("\n".join(csw.records))
 
 # <markdowncell>
 
-# Dap URLS
+# DAP URLs:
 
 # <codecell>
 
-dap_urls = service_urls(csw.records,service_string='urn:x-esri:specification:ServiceType:odp:url')
-#remove duplicates and organize
+dap_urls = service_urls(csw.records, service='odp:url')
+
+# Remove duplicates and organize.
 dap_urls = sorted(set(dap_urls))
-print "Total DAP:",len(dap_urls)
-#print the first 5...
-print "\n".join(dap_urls[0:5])
+print("Total DAP: %s" % len(dap_urls))
+
+# print the first 5...
+print("\n".join(dap_urls[:]))
 
 # <markdowncell>
 
-# SOS URLs
+# SOS URLs:
 
 # <codecell>
 
-sos_urls = service_urls(csw.records,service_string='urn:x-esri:specification:ServiceType:sos:url')
-#remove duplicates and organize
+sos_urls = service_urls(csw.records, service='sos:url')
+
+# Remove duplicates and organize.
 sos_urls = sorted(set(sos_urls))
-print "Total SOS:",len(sos_urls)
-print "\n".join(sos_urls)
+print("Total SOS: %s" % len(sos_urls))
+print("\n".join(sos_urls))
 
 # <markdowncell>
 
 # ### SOS Requirements
+# #### Use Pyoos SOS collector to obtain Observation data from COOPS.
+
+# <markdowncell>
+
+# Use the get caps to get station start and get time.
 
 # <codecell>
 
-#use the get caps to get station start and get time
-
-# <codecell>
-
-start_time = dt.datetime.strptime(start_date,'%Y-%m-%d %H:%M')
-end_time = dt.datetime.strptime(end_date,'%Y-%m-%d %H:%M')
+start_time = datetime.strptime(start_date, '%Y-%m-%d %H:%M')
+end_time = datetime.strptime(end_date, '%Y-%m-%d %H:%M')
 
 # <codecell>
 
@@ -207,134 +205,166 @@ collector.variables = [data_dict["water"]["sos_name"]]
 
 # <codecell>
 
-print "Date: ",iso_start," to ", iso_end
-box_str=','.join(str(e) for e in box)
-print "Lat/Lon Box: ",box_str
-#grab the sos url and use it for the service
-url=(sos_urls[0].split("?")[0]+'?'
-     'service=SOS&request=GetObservation&version=1.0.0&'
-     'observedProperty=%s&offering=urn:ioos:network:NOAA.NOS.CO-OPS:WaterLevelActive&'
-     'featureOfInterest=BBOX:%s&responseFormat=text/tab-separated-values&eventTime=%s') % (sos_name,box_str,iso_end)
+print("Date: %s to %s" % (iso_start, iso_end))
+box_str = ','.join(str(e) for e in box)
+print("Lat/Lon Box: %s" % box_str)
+
+# <codecell>
+
+# Grab the sos url and use it for the service.
+url = (sos_urls[0].split("?")[0] + '?'
+       'service=SOS&request=GetObservation&version=1.0.0&'
+       'observedProperty=%s&'
+       'offering=urn:ioos:network:NOAA.NOS.CO-OPS:WaterLevelActive&'
+       'featureOfInterest=BBOX:%s&responseFormat=text/tab-separated-values&'
+       'eventTime=%s') % (sos_name, box_str, iso_end)
 
 r = requests.get(url)
 data = r.text
-#get the headers for the cols
+# Get the headers for the col.
 data = data.split("\n")
-headers =  data[0]
+headers = data[0]
 station_list_dict = dict()
-#parse the headers so i can create a dict
+# Parse the headers so I can create a dict.
 c = 0
 for h in headers.split("\t"):
     field = h.split(":")[0].split(" ")[0]
-    station_list_dict[field] = {"id":c}
-    c+=1
+    station_list_dict[field] = {"id": c}
+    c += 1
 
 # <codecell>
 
-def get_coops_longName(sta):
-    """
-    get longName for specific station from COOPS SOS using DescribeSensor request
-    """
-    url=(sos_urls[0].split("?")[0]+'?service=SOS&'
-        'request=DescribeSensor&version=1.0.0&outputFormat=text/xml;subtype="sensorML/1.0.1"&'
-        'procedure=%s') % sta
-    tree = etree.parse(urllib2.urlopen(url))
-    root = tree.getroot()
-    longName=root.xpath("//sml:identifier[@name='longName']/sml:Term/sml:value/text()", namespaces={'sml':"http://www.opengis.net/sensorML/1.0.1"})
-    return longName
-
-# <codecell>
-
-#finds the max value given a json object
 def findMaxVal(data):
+    """Finds the max value given a json object."""
     dates_array = []
     vals_array = []
     for x in data:
         dates_array.append(str(x["t"]))
         vals_array.append(x["v"])
-    
-    p = np.array(vals_array,dtype=np.float)
+
+    p = np.array(vals_array, dtype=np.float)
     x = np.arange(len(p))
     max_val = np.amax(p)
     max_idx = np.argmax(p)
-    return (max_val,len(p),dates_array[max_idx])
+    return (max_val, len(p), dates_array[max_idx])
 
-# <codecell>
-
-def coops2data(collector,station_id,sos_name):
+def coops2data(collector, station_id, sos_name):
+    """Extract the Observation Data from the collector."""
     collector.features = [station_id]
     collector.variables = [sos_name]
     station_data = dict()
-    #loop through the years and get the data needed
-    for year_station in range(int(collector.start_time.year),collector.end_time.year+1):      
-        link = "http://tidesandcurrents.noaa.gov/api/datagetter?product="+sos_name+"&application=NOS.COOPS.TAC.WL&"
+    # Loop through the years and get the data needed.
+    for year_station in range(int(collector.start_time.year),
+                              collector.end_time.year+1):
+        link = "http://tidesandcurrents.noaa.gov/api/datagetter?product="
+        link += sos_name + "&application=NOS.COOPS.TAC.WL&"
         date1 = "begin_date="+str(year_station)+"0101"
         date2 = "&end_date="+str(year_station)+"1231"
         datum = "&datum=MHHW"
         units = "&units=metric"
-        station_request = "&station="+station_id+"&time_zone=GMT&units=english&format=json"
-        http_request = link+date1+date2+units+datum+station_request
-        #print http_request
-        d_r = requests.get(http_request,timeout=20)
+        station_request = "&station=%s" % station_id
+        station_request += "&time_zone=GMT&units=english&format=json"
+        http_request = link + date1 + date2 + units + datum + station_request
+        # print(http_request)
+        d_r = requests.get(http_request, timeout=20)
         if "Great Lake station" in d_r.text:
             pass
         else:
-            key_list =  d_r.json().keys()
+            key_list = d_r.json().keys()
             if "data" in key_list:
                 data = d_r.json()['data']
-                max_value,num_samples,date_string = findMaxVal(data)
-                station_data[str(year_station)] =  {"max":max_value,"num_samples":num_samples,"date_string":date_string,"raw":data}
-                #print "\tyear:",year_station," MaxValue:",max_value
+                max_value, num_samples, date_string = findMaxVal(data)
+                station_data[str(year_station)] = {"max": max_value,
+                                                   "num_samples": num_samples,
+                                                   "date_string": date_string,
+                                                   "raw": data}
+                # print("\tyear:", year_station, " MaxValue:", max_value)
     return station_data
 
 # <codecell>
 
-#create dict of stations
+# Create dict of stations.
 station_list = []
-for i in range(1,len(data)):
+for i in range(1, len(data)):
     station_info = data[i].split("\t")
     station = dict()
-    for field in station_list_dict.keys():        
+    for field in station_list_dict.keys():
         col = station_list_dict[field]["id"]
         if col < len(station_info):
-            station[field] = station_info[col]     
-    station_list.append(station)        
+            station[field] = station_info[col]
+    station["type"] = "obs"
+    station_list.append(station)
 
 # <codecell>
 
-#Embeds the HTML source of the map directly into the IPython notebook.
-def inline_map(map):   
-    map._build_map()
-    return HTML('<iframe srcdoc="{srcdoc}" style="width: 100%; height: 500px; border: none"></iframe>'.format(srcdoc=map.HTML.replace('"', '&quot;')))
+def add_invalid_marker(m, s, popup_string):
+    m.circle_marker(location=[s["latitude"], s["longitude"]],
+                    popup=popup_string, fill_color='#ff0000',
+                    radius=10000, line_color='#ff0000')
 
+# <markdowncell>
 
-#print bounding_box[0]
-map = folium.Map(location=[bounding_box[0][1], bounding_box[0][0]], zoom_start=6)
+# **TODO**: Add check before extracting the data toTODO: Add check before extracting the data to see if the required number of
+# years will be met, i.e use SOS GetCaps and begin and end time. see if the required number of years will be met, i.e use SOS GetCaps and begin and end time
+
+# <codecell>
+
+def does_station_have_enough_times():
+    return True
+
+# <codecell>
+
+# print(bounding_box[0])
+m = folium.Map(location=[bounding_box[0][1], bounding_box[0][0]],
+               zoom_start=6)
 
 station_yearly_max = []
 for s in station_list:
-    #get the long name
-    s["long_name"] =get_coops_longName(s['station_id'])
-    #get the data
-    station_num = str(s['station_id']).split(':')[-1]
-    s["station_num"] = station_num
-    #this is different than sos name, hourly height is hourly water level
-    raw_data = coops2data(collector,station_num,"hourly_height")    
-    s["data"] = raw_data
-    if "latitude" in s:
-        popup_string = '<b>Station:</b><br>'+str(s['station_id']) + "<br><b>Long Name:</b><br>"+str(s["long_name"])
-        map.simple_marker([s["latitude"],s["longitude"]],popup=popup_string)
-   
-    #break after the first one    
-    break
-# Create the map and add the bounding box line
-map.line(get_coordinates(bounding_box,bounding_box_type), line_color='#FF0000', line_weight=5)
+    if s["type"] is "obs" and s['station_id']:  # If its an obs station.
+        # Get the long name.
+        sta = s['station_id'].split(':')[-1]
+        s["long_name"] = get_Coops_longName(sta)
+        s["station_num"] = str(s['station_id']).split(':')[-1]
+        # This is different than sos name, hourly height is hourly water level.
+        s["data"] = coops2data(collector, s["station_num"], "high_low")
+        # Verifies that there is the required amount of data at the station.
+        if "latitude" in s:
+            if len(s["data"].keys()) >= num_years_required:
+                popup_string = ('<b>Station:</b><br>' + str(s['station_id']) +
+                                "<br><b>Long Name:</b><br>" +
+                                str(s["long_name"]))
+                m.simple_marker(location=[s["latitude"], s["longitude"]],
+                                popup=popup_string)
+            else:
+                popup_string = ('<b>Not Enough Station Data for Num of years'
+                                'requested</b><br><br>Num requested:' +
+                                str(num_years_required) +
+                                '<br>Num Available:' +
+                                str(len(s["data"].keys())) +
+                                '<br><b>Station:</b><br>' +
+                                str(s['station_id']) +
+                                "<br><b>Long Name:</b><br>" +
+                                str(s["long_name"]))
+                add_invalid_marker(m, s, popup_string)
+    else:  # If its a model station.
+        if "latitude" in s:
+            popup_string = ('<b>Station:</b><br>' + str(s['station_id']) +
+                            "<br><b>Long Name:</b><br>" + str(s["long_name"]))
+            m.simple_marker([s["latitude"], s["longitude"]],
+                            popup=popup_string)
 
-inline_map(map)
+# Create the map and add the bounding box line
+m.line(get_coordinates(bounding_box, bounding_box_type),
+       line_color='#FF0000', line_weight=5)
+
+# Show map of results.
+inline_map(m)
+
+# <markdowncell>
+
+# ### Creates a time series plot only showing stations that have enough data
 
 # <codecell>
-
-import prettyplotlib as ppl
 
 # Set the random seed for consistency
 np.random.seed(12)
@@ -345,34 +375,351 @@ fig, ax = plt.subplots(1)
 for s in station_list:
     if "data" in s:
         years = s["data"].keys()
-        xx = []
-        yx = []
-        for y in years:    
-            xx.append(int(y))
-            val = s["data"][y]["max"]
-            yx.append(val)  
-        
-        #ax.scatter(xx,yx,marker='o')
-        #ppl.scatter(ax, xx, yx, alpha=0.8, edgecolor='black', linewidth=0.15, label=str(s["station_num"]))
-        ax.scatter(xx, yx, label=str(s["station_num"]))
+        # Only show the stations with enough data.
+        if len(s["data"].keys()) >= num_years_required:
+            xx = []
+            yx = []
+            for y in years:
+                xx.append(int(y))
+                val = s["data"][y]["max"]
+                yx.append(val)
 
-        #ppl.legend(ax, loc='right', ncol=1)
-        legend = ax.legend(loc='best')
-        
-        # The frame is matplotlib.patches.Rectangle instance surrounding the legend.
-        frame  = legend.get_frame()
-        
-        title = s["long_name"][0] + ' water level'
-        ax.set_title(title)
-        ax.set_xlabel('Year')
-        ax.set_ylabel('water level (m)')
-        break
+            ax.scatter(xx, yx, marker='o')
+            ppl.scatter(ax, xx, yx, alpha=0.8, edgecolor='black',
+                        linewidth=0.15, label=str(s["station_num"]))
+            ppl.legend(ax, loc='right', ncol=1)
+            title = s["long_name"][0] + ' water level'
+            ax.set_xlabel('Year')
+            ax.set_ylabel('water level (m)')
+ax.set_title("Stations exceeding " +
+             str(num_years_required) +
+             " years worth of water level data (MHHW)")
+fig.set_size_inches(14, 8)
 
-fig.set_size_inches(14,8)
+# <markdowncell>
+
+# ### Number of stations available by number of years
+
+# <codecell>
+
+fig, ax = plt.subplots(1)
+year_list_map = []
+for s in station_list:
+    if "data" in s:
+        years = s["data"].keys()
+        year_list_map.append(len(years))
+
+ppl.hist(ax, np.array(year_list_map), grid='y')
+plt.plot([num_years_required, num_years_required], [0, 8], 'r-', lw=2)
+ax.set_ylabel("Number of Stations")
+ax.set_xlabel("Number of Years Available")
+ax.set_title('Number of available stations vs available years\n'
+             '(for bounding box) - red is minimum requested years')
+
+# <markdowncell>
+
+# ### Get Model Data, uses the netcdf4 library to get the model data (**Still in Development**)
+# #### Obtains the model data from a given dap url, for a given location
+# #### TODO: Temporal extraction based on temporal contraints
+
+# <codecell>
+
+def find_closest_pts_ij(lat_var, lon_var, f_lat, f_lon):
+    """IJ GRID READER.  Use the simple grid to find the data requested
+    lat_var, lon_var are pointers to the data."""
+    x, y = lat_var[:], lon_var[:]
+    dist = xidx = yidx = -1
+    for i in range(0, len(x)):
+        for j in range(0, len(y)):
+            distance = Point(x[i], y[j]).distance(Point(f_lat, f_lon))
+            if dist == -1:
+                dist = distance
+                xidx = i
+                yidx = j
+            elif distance < dist:
+                dist = distance
+                xidx = i
+                yidx = j
+    lat = x[xidx]
+    lon = y[yidx]
+    # lat lon index of point.
+    vals = [lat, lon, xidx, yidx]
+    return vals
+
+# <codecell>
+
+def find_closest_pts_ncell(map1, lat_var, lon_var, f_lat, f_lon, spacing):
+    """NCELL GRID READER.  Use the simple grid to find the data requested.
+    lat_var, lon_var are pointers to the data."""
+    x = lat_var[::spacing]
+    y = lon_var[::spacing]
+    idx = get_dist(x, y, f_lat, f_lon, '#666699', '#666699', map1, False)
+    # Find the idx that is closest.
+    print("%s :index: %s" % (spacing, idx))
+    idx = idx[0] * spacing
+    st_idx = idx - (2*spacing)
+    ed_idx = idx + (2*spacing)
+
+    x = lat_var[st_idx:ed_idx]
+    y = lon_var[st_idx:ed_idx]
+    ret = get_dist(x, y, f_lat, f_lon, '#00FFFF', '#33CCFF', map1, False)
+    lat = x[ret[0]]
+    lon = y[ret[0]]
+    # lat lon index of point distance between points.
+    vals = [lat, lon, ret[0], ret[1]]
+    return vals
+
+# <codecell>
+
+def get_dist(x, y, f_lat, f_lon, color1, color2, map1, show_pts):
+    dist = -1
+    idx = -1
+    for i in range(0, len(x)):
+        distance = Point(x[i], y[i]).distance(Point(f_lat, f_lon))
+        if dist == -1:
+            dist = distance
+            idx = i
+        elif distance < dist:
+            dist = distance
+            idx = i
+        if show_pts:
+            map1.circle_marker(location=[x[i], y[i]], radius=500,
+                               popup="idx:" + str(i), line_color=color2,
+                               fill_color=color1, fill_opacity=0.3)
+    return [idx, dist]
+
+# <codecell>
+
+def check_grid_is_valid(time_var, lat_var, lon_var, interest_var):
+    """VERIFIES THAT THE GRID IS VALID."""
+    grid_type = None
+    # There is data with the fields of interest, now lets check the fields for
+    # validity.
+    valid_grid = False
+    # They are both the same length.
+    if len(lon_var.shape) == len(lat_var.shape):
+        if lon_var.shape[0] == lat_var.shape[0]:
+            # Both the same size.
+            # print("gridded data...")
+            valid_grid = True
+        else:
+            # Both different, possibly meaning i,j grid field.
+            # print("gridded data...")
+            valid_grid = True
+    else:
+        print("shapes are different?...moving on...")
+        valid_grid = False
+    if valid_grid:
+        # Find out what the grid is structured.
+        if (len(interest_var.dimensions) == 2) and (interest_var.dimensions[0] == "time") and (interest_var.dimensions[1] == "node"):
+            grid_type = "ncell"
+            pass
+        elif (len(interest_var.dimensions) == 3) and (interest_var.dimensions[0] == "time") and (interest_var.dimensions[1] == "lat") and (interest_var.dimensions[2] == "lon"):
+            grid_type = "ij"
+            pass
+        else:
+            # Make sure it stays none.
+            grid_type = None
+        if grid_type is not None:
+            # Can be used to print some info.
+            # print("dims: ",interest_var.dimensions)
+            # print("lat: ", lat_var.shape)
+            # print("lon: ", lon_var.shape)
+            pass
+    return grid_type
+
+# <codecell>
+
+def is_model_in_time_range(time_var):
+    return True
+
+# <codecell>
+
+# Use only data where the standard deviation of the time series exceeds 0.01 m
+# (1 cm) this eliminates flat line model time series that come from land
+# points that should have had missing values.
+# min_var_value = 0.01
+def data_min_value_met(min_var_value, data):
+    std_value = np.std(data)
+    if np.isinf(std_value):
+        print("... Value is inf.")
+        return False
+    if np.isnan(std_value):
+        print("... Value is nan.")
+        return False
+
+    if np.amax(data) < min_var_value:
+        print("...max value to low.")
+        return False
+    if np.amax(data) > 999:
+        print("...max value to high.")
+        return False
+    if std_value > min_var_value:
+        return True
+    else:
+        print("...std value to low.")
+        return False
+    return False
+
+# <codecell>
+
+def get_model_data(map1, dap_urls, st_lat, st_lon, start_dt, end_dt,
+                   name_list):
+    # max_dist = 0.04  # Use only data within 0.04 degrees (about 4 km).
+    min_var_value = 0.01
+    # Set the lat,lon and time fields.
+    lon_list = ["degrees_east"]
+    lat_list = ["degrees_north"]
+    time_list = ["time"]
+    # model_data_store = []
+    for url in dap_urls:
+        try:
+            nc = netCDF4.Dataset(url, 'r')
+            lon_var = None
+            lat_var = None
+            time_var = None
+            interest_var = None
+            var_list = nc.variables.keys()
+            for var in var_list:
+                v = nc.variables[var]
+                try:
+                    if (v.units in lon_list or v.long_name in lon_list) and "zonal" not in v.long_name:
+                        lon_var = v
+                    elif ((v.units in lat_list or v.long_name in lat_list) and
+                          "zonal" not in v.long_name):
+                        lat_var = v
+                    # Make sure there is time in there.
+                    elif (v.long_name in time_list or v.standard_name in
+                          time_list):
+                        time_var = v
+                    # Get the data of interest.
+                    elif (v.long_name in name_list or v.standard_name in
+                          name_list):
+                        interest_var = v
+                    # It was something else I don't know or care about.
+                    else:
+                        pass
+                except Exception as e:
+                    # print("\t %s" % e)
+                    pass
+            # Is time in range?
+            if is_model_in_time_range(time_var):
+                # All the variables should be set.
+                if (lon_var is None) and (lat_var is None) and (time_var is None) and (interest_var is None):
+                    pass
+                else:
+                    # Check the grid is valid and of a type.
+                    grid_type = check_grid_is_valid(time_var, lat_var,
+                                                    lon_var, interest_var)
+                    try:
+                        if grid_type == "ncell":
+                            # Usually ncell grids are massive so lets slice the
+                            # grid.
+                            print("processing the grid...")
+                            spacing = 10
+                            '''
+                            the distance is the Euclidean Distance
+                            or Linear distance between two points on a plane
+                            and not the Great-circle distance between two
+                            points on a sphere TODO convert dist to m
+                            see (http://gis.stackexchange.com/questions/80881/
+                            what-is-the-unit-the-shapely-length-attribute)
+                            '''
+                            # vals = lat lon index of point distance between
+                            # points.
+                            vals = find_closest_pts_ncell(map1, lat_var,
+                                                          lon_var, st_lat,
+                                                          st_lon, spacing)
+                            if vals[3] < 1:
+                                # If the dist to the cell is small enough.
+                                time_vals = time_var[:]
+                                data = interest_var[:, vals[2]]
+                                data = np.array(data)
+                                bool_a = data_min_value_met(min_var_value,
+                                                            data)
+                                print(bool_a)
+                                if bool_a:
+                                    # Add a marker.
+                                    map1.circle_marker(location=[vals[0],
+                                                                 vals[1]],
+                                                       radius=500,
+                                                       popup=("dist: %s" %
+                                                              vals[3]),
+                                                       line_color='#33CC33',
+                                                       fill_color='#00FF00',
+                                                       fill_opacity=0.6)
+                                    print(vals)
+                                    print(url)
+                                    print("distance To Station: %s" % vals[3])
+                                    print("num time values: %s" %
+                                          len(time_vals))
+                                    print("units: %s" % interest_var.units)
+                                    x = np.arange(len(time_vals))
+                                    plt.figure()
+                                    plt.plot(x, data)
+                                    plt.title('Water Level')
+                                    plt.xlabel('time index')
+                                    plt.ylabel(interest_var.units)
+                                    # set maxs.
+                                    plt.ylim([np.amin(data), np.amax(data)])
+                                    plt.show()
+                                    print("---------------------")
+                            pass
+                        elif grid_type == "ij":
+                            pass
+                    except Exception as e:
+                        print(e)
+            else:
+                print("model not in time range...")
+        # Something went wrong trying to access the grids.
+        except RuntimeError as e:
+            print("possible connection error for url")
+            pass
+        except:
+            pass
+
+# <codecell>
+
+pt_lat = 41.501
+pt_lon = -71
+
+map1 = folium.Map(location=[pt_lat, pt_lon], zoom_start=9)
+
+map1.simple_marker([pt_lat, pt_lon], popup="")
+
+# EXAMPLE get model data for a station.
+start_time = datetime(2008, 9, 10, 5, 1, 1)
+end_time = datetime(2008, 9, 11, 5, 1, 1)
+sample_data = get_model_data(map1, dap_urls, pt_lat, pt_lon, start_time,
+                             end_time, data_dict["water"]["names"])
+
+# <markdowncell>
+
+# #### Show model results on a map
+
+# <codecell>
+
+inline_map(map1)
 
 # <headingcell level=3>
 
 # Extreme Value Analysis:
+
+# <codecell>
+
+# Show the whole color range
+for s in station_list:
+    if "data" in s:
+        years = s["data"].keys()
+        # Only show the stations with enough data.
+        if len(s["data"].keys()) >= num_years_required:
+            xx = []
+            yx = []
+            for y in years:
+                xx.append(int(y))
+                val = s["data"][y]["max"]
+                yx.append(val)
+            break
 
 # <codecell>
 
@@ -385,15 +732,16 @@ annual_max_levels = yx
 # <codecell>
 
 def sea_levels_gev_pdf(x):
-    return genextreme.pdf(x, xi, loc=mu, scale=sigma)
+    return stats.genextreme.pdf(x, xi, loc=mu, scale=sigma)
 
 # <codecell>
 
-mle = genextreme.fit(sorted(annual_max_levels), 0)
+mle = stats.genextreme.fit(sorted(annual_max_levels), 0)
 mu = mle[1]
 sigma = mle[2]
 xi = mle[0]
-print "The mean, sigma, and shape parameters are %s, %s, and %s, resp." % (mu, sigma, xi)
+print("The mean, sigma, and shape parameters are %s, %s, and %s, resp." %
+      (mu, sigma, xi))
 
 # <headingcell level=4>
 
@@ -401,18 +749,20 @@ print "The mean, sigma, and shape parameters are %s, %s, and %s, resp." % (mu, s
 
 # <codecell>
 
-min_x = min(annual_max_levels)-0.5
-max_x = max(annual_max_levels)+0.5
+min_x = min(annual_max_levels) - 0.5
+max_x = max(annual_max_levels) + 0.5
 x = np.linspace(min_x, max_x, num=100)
 y = [sea_levels_gev_pdf(z) for z in x]
 
-fig = plt.figure(figsize=(12,6))
+fig = plt.figure(figsize=(12, 6))
 axes = fig.add_axes([0.1, 0.1, 0.8, 0.8])
 xlabel = (s["long_name"][0] + " - Annual max water level (m)")
 axes.set_title("Probability Density & Normalized Histogram")
 axes.set_xlabel(xlabel)
 axes.plot(x, y, color='Red')
-axes.hist(annual_max_levels, bins=arange(min_x, max_x, abs((max_x-min_x)/10)), normed=1, color='Yellow')
+axes.hist(annual_max_levels,
+          bins=np.arange(min_x, max_x, abs((max_x-min_x)/10)),
+          normed=1, color='Yellow')
 
 # <headingcell level=4>
 
@@ -420,28 +770,47 @@ axes.hist(annual_max_levels, bins=arange(min_x, max_x, abs((max_x-min_x)/10)), n
 
 # <markdowncell>
 
-# This plot should match NOAA's [Annual Exceedance Probability Curves for station 8449130](http://tidesandcurrents.noaa.gov/est/curves.shtml?stnid=8449130)
+# This plot should match NOAA's [Annual Exceedance Probability Curves for station 8449130](http://tidesandcurrents.noaa.gov/est/curves.shtml?stnid=8449130).
 
 # <codecell>
 
-fig = plt.figure(figsize=(20,6))
+noaa_station_id = 8449130
+Image(url='http://tidesandcurrents.noaa.gov/est/curves/high/' +
+      str(noaa_station_id)+'.png')
+
+# <codecell>
+
+Image(url='http://tidesandcurrents.noaa.gov/est/images/color_legend.png')
+
+# <markdowncell>
+
+# <script type="text/javascript">
+#     $('div.input').show();       
+# </script>
+
+# <codecell>
+
+fig = plt.figure(figsize=(20, 6))
 axes = fig.add_axes([0.1, 0.1, 0.8, 0.8])
-T=np.r_[1:500]
-sT = genextreme.isf(1./T, 0, mu, sigma)
-axes.semilogx(T, sT, 'r'), hold
-N=np.r_[1:len(annual_max_levels)+1]; 
-Nmax=max(N);
+T = np.r_[1:250]
+sT = stats.genextreme.isf(1./T, 0, mu, sigma)
+axes.semilogx(T, sT, 'r')
+N = np.r_[1:len(annual_max_levels)+1]
+Nmax = max(N)
 axes.plot(Nmax/N, sorted(annual_max_levels)[::-1], 'bo')
-title = s["long_name"][0] 
+title = s["long_name"][0]
 axes.set_title(title)
 axes.set_xlabel('Return Period (yrs)')
-axes.set_ylabel('Meters above MHHW') 
+axes.set_ylabel('Meters above MHHW')
+axes.set_xticklabels([0, 1, 10, 100, 1000])
+axes.set_xlim([0, 260])
+axes.set_ylim([0, 1.8])
 axes.grid(True)
 
 # <markdowncell>
 
-# This plot does not match exactly. NOAA's curves were calculated using the Extremes Toolkit software package in R whereas this notebook uses scipy. There is a python package based on the Extremes Toolkit called pywafo but this is experimental and isn't building properly on Mac OS X
-
-# <codecell>
-
+# This plot does not match exactly.  NOAA's curves were calculated using the
+# Extremes Toolkit software package in R whereas this notebook uses scipy.
+# There is a python package based on the Extremes Toolkit called pywafo but
+# this is experimental and isn't building properly on Mac OS X.
 
