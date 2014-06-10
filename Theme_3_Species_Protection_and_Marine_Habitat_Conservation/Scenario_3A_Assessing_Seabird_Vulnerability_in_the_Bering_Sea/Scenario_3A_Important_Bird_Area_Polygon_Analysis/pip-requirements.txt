@@ -1,0 +1,9 @@
+pandas
+numpy
+matplotlib
+OWSLib
+netCDF4
+geojson
+Shapely
+git+https://github.com/wrobstory/folium.git#egg=folium
+rdflib
