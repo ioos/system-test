@@ -1,0 +1,12 @@
+pandas
+numpy
+matplotlib
+OWSLib
+netCDF4
+lxml
+pyoos
+cython
+pyshp
+Pillow
+cartopy
+pyke
