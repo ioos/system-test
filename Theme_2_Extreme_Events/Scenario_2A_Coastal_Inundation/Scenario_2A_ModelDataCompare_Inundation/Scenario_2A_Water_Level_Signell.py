@@ -30,7 +30,7 @@ from datetime import datetime, timedelta
 
 # Scientific stack.
 import iris
-#iris.FUTURE.netcdf_promote = True
+iris.FUTURE.netcdf_promote = True
 
 import numpy as np
 import cartopy.crs as ccrs
