@@ -30,6 +30,8 @@ from datetime import datetime, timedelta
 
 # Scientific stack.
 import iris
+#iris.FUTURE.netcdf_promote = True
+
 import numpy as np
 import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
@@ -304,8 +306,6 @@ extent = [box[0], box[2], box[1], box[3]]
 ax.set_extent(extent, geodetic)
 ax.add_image(tiler, zoom)
 
-# <codecell>
-
 ax.scatter(obs_lon, obs_lat, marker='o', s=30,
            color='cyan', transform=ccrs.PlateCarree())
 geodetic_transform = ccrs.Geodetic()._as_mpl_transform(ax)
@@ -329,7 +329,7 @@ ax.set_title('Water Level Gauge Locations')
 
 # <codecell>
 
-print(name_list)
+print('\n'.join(name_list))
 name_in_list = lambda cube: cube.standard_name in name_list
 constraint = iris.Constraint(cube_func=name_in_list)
 
@@ -439,7 +439,4 @@ if True:
         ax.legend()
         ax.set_ylabel('m')
         print(amean.ix[0] - amean)
-
-# <codecell>
-
 
