@@ -8,7 +8,6 @@ netCDF4
 lxml
 pyoos
 pyshp
-Pillow
 pyke
 Shapely
 biggus

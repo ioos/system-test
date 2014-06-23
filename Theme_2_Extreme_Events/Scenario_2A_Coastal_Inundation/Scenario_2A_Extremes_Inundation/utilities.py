@@ -9,6 +9,7 @@ Standard Library.
 
 from lxml import etree
 from io import BytesIO
+import requests
 from warnings import warn
 try:
     from urllib.request import urlopen
@@ -71,6 +72,55 @@ def get_Coops_longName(station):
     if len(longName) == 0:
         longName = station
     return longName[0]
+
+
+def findMaxVal(data):
+    """Finds the max value given a json object."""
+    dates_array = []
+    vals_array = []
+    for x in data:
+        dates_array.append(str(x["t"]))
+        vals_array.append(x["v"])
+
+    p = np.array(vals_array, dtype=np.float)
+    x = np.arange(len(p))
+    max_val = np.amax(p)
+    max_idx = np.argmax(p)
+    return (max_val, len(p), dates_array[max_idx])
+
+
+def coops2data(collector, station_id, sos_name):
+    """Extract the Observation Data from the collector."""
+    collector.features = [station_id]
+    collector.variables = [sos_name]
+    station_data = dict()
+    # Loop through the years and get the data needed.
+    for year_station in range(int(collector.start_time.year),
+                              collector.end_time.year+1):
+        link = "http://tidesandcurrents.noaa.gov/api/datagetter?product="
+        link += sos_name + "&application=NOS.COOPS.TAC.WL&"
+        date1 = "begin_date="+str(year_station)+"0101"
+        date2 = "&end_date="+str(year_station)+"1231"
+        datum = "&datum=MHHW"
+        units = "&units=metric"
+        station_request = "&station=%s" % station_id
+        station_request += "&time_zone=GMT&units=english&format=json"
+        http_request = link + date1 + date2 + units + datum + station_request
+        # print(http_request)
+        d_r = requests.get(http_request, timeout=20)
+        if "Great Lake station" in d_r.text:
+            pass
+        else:
+            key_list = d_r.json().keys()
+            if "data" in key_list:
+                data = d_r.json()['data']
+                max_value, num_samples, date_string = findMaxVal(data)
+                station_data[str(year_station)] = {"max": max_value,
+                                                   "num_samples": num_samples,
+                                                   "date_string": date_string,
+                                                   "raw": data}
+                # print("\tyear:", year_station, " MaxValue:", max_value)
+    return station_data
 
 
 def coops2df(collector, coops_id, sos_name):

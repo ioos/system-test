@@ -17,12 +17,12 @@
 2. Using `conda`
     ```bash
     conda install --file conda-requirements.txt
-    conda install -c https://conda.binstar.org/rsignell iris=v1.6.2_RPS
+    conda install -c https://conda.binstar.org/rsignell iris prettyplotlib
     ```
     If you are using environments within conda, be sure to specify it
     ```bash
     conda install -n yourenvname --file conda-requirements.txt
-    conda install -n yourenvname -c https://conda.binstar.org/rsignell iris=v1.6.2_RPS
+    conda install -n yourenvname -c https://conda.binstar.org/rsignell iris prettyplotlib
     ```
 
 #### Helper methods

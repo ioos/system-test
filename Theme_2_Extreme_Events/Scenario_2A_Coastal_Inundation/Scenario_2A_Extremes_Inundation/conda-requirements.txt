@@ -8,6 +8,5 @@ pyoos
 git+https://github.com/wrobstory/folium.git#egg=folium
 cython
 pyshp
-Pillow
 cartopy
 pyke
