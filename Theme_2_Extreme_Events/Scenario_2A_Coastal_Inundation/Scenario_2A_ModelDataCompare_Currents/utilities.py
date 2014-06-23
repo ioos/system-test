@@ -1,24 +1,28 @@
 """
-@file   utilities.py
-@brief  utility functions for IOOS System Test notebook: Scenario_A_Model_Obs_Compare_Waves.ipynb
+Utility functions for Scenario_A_Model_Obs_Compare_Currents.ipynb
 """
 
-import cStringIO
 from lxml import etree
-import urllib2
+from io import BytesIO
+from warnings import warn
+try:
+    from urllib.request import urlopen
+except ImportError:
+    from urllib import urlopen
 
 # Scientific stack.
 import numpy as np
+from IPython.display import HTML
 from pandas import DataFrame, concat, read_csv
 
 # Custom IOOS/ASA modules (available at PyPI).
 from owslib import fes
+from owslib.ows import ExceptionReport
 
 
-def date_range(start_date='1900-01-01', stop_date='2100-01-01', constraint='overlaps'):
-    """
-    Hopefully something like this will be implemented in fes soon.
-    """
+def date_range(start_date='1900-01-01', stop_date='2100-01-01',
+               constraint='overlaps'):
+    """Hopefully something like this will be implemented in fes soon."""
     if constraint == 'overlaps':
         propertyname = 'apiso:TempExtent_begin'
         start = fes.PropertyIsLessThanOrEqualTo(propertyname=propertyname,
@@ -36,45 +40,50 @@ def date_range(start_date='1900-01-01', stop_date='2100-01-01', constraint='over
     return start, stop
 
 
-def get_NDBC_station_long_name(sta):
-    """
-    Get longName for specific NDBC station
-    """
-    url = ('http://sdf.ndbc.noaa.gov/sos/server.php?service=SOS&version=1.0.0&'
-           'request=DescribeSensor&version=1.0.0&outputFormat=text/xml;subtype="sensorML/1.0.1"&'
-           'procedure=urn:ioos:station:wmo:%s') % sta
-    tree = etree.parse(urllib2.urlopen(url))
+def get_Coops_longName(station):
+    """Get longName for specific station from COOPS SOS using DescribeSensor
+    request."""
+    url = ('http://opendap.co-ops.nos.noaa.gov/ioos-dif-sos/SOS?service=SOS&'
+           'request=DescribeSensor&version=1.0.0&'
+           'outputFormat=text/xml;subtype="sensorML/1.0.1"&'
+           'procedure=urn:ioos:station:NOAA.NOS.CO-OPS:%s') % station
+    tree = etree.parse(urlopen(url))
     root = tree.getroot()
-    longName = root.xpath("//sml:identifier[@name='longName']/sml:Term/sml:value/text()",
-                          namespaces={'sml': "http://www.opengis.net/sensorML/1.0.1"})
-    return longName
+    path = "//sml:identifier[@name='longName']/sml:Term/sml:value/text()"
+    namespaces = dict(sml="http://www.opengis.net/sensorML/1.0.1")
+    longName = root.xpath(path, namespaces=namespaces)
+    if len(longName) == 0:
+        longName = station
+    return longName[0]
 
 
 def coops2df(collector, coops_id, sos_name):
-    """
-    Request CSV response from SOS and convert to Pandas DataFrames.
-    """
+    """Request CSV response from SOS and convert to Pandas DataFrames."""
     collector.features = [coops_id]
     collector.variables = [sos_name]
-    response = collector.raw(responseFormat="text/csv")
-    data_df = read_csv(cStringIO.StringIO(str(response)), parse_dates=True, index_col='date_time')
-#    data_df['Observed Data']=data_df['water_surface_height_above_reference_datum (m)']-data_df['vertical_position (m)']
-    data_df['sea_water_speed (cm/s)'] = data_df['sea_water_speed (cm/s)']
+    long_name = get_Coops_longName(coops_id)
 
-    a = get_NDBC_station_long_name(coops_id)
-    if len(a) == 0:
-        long_name = coops_id
-    else:
-        long_name = a[0]
+    try:
+        response = collector.raw(responseFormat="text/csv")
+        data_df = read_csv(BytesIO(response.encode('utf-8')),
+                           parse_dates=True,
+                           index_col='date_time')
+        col = 'water_surface_height_above_reference_datum (m)'
+        if False:
+            data_df['Observed Data'] = (data_df[col] -
+                                        data_df['vertical_position (m)'])
+        data_df['Observed Data'] = data_df[col]
+    except ExceptionReport as e:
+        warn("Station %s is not NAVD datum. %s" % (long_name, e))
+        data_df = DataFrame()  # Assing an empty DataFrame for now.
+
     data_df.name = long_name
     return data_df
 
 
 def mod_df(arr, timevar, istart, istop, mod_name, ts):
-    """
-    Return time series (DataFrame) from model interpolated onto uniform time
-    base.
-    """
+    """Return time series (DataFrame) from model interpolated onto uniform time
+    base."""
     t = timevar.points[istart:istop]
     jd = timevar.units.num2date(t)
 
@@ -99,9 +108,7 @@ def mod_df(arr, timevar, istart, istop, mod_name, ts):
 
 
 def service_urls(records, service='odp:url'):
-    """
-    Extract service_urls of a specific type (DAP, SOS) from records.
-    """
+    """Extract service_urls of a specific type (DAP, SOS) from records."""
     service_string = 'urn:x-esri:specification:ServiceType:' + service
     urls = []
     for key, rec in records.iteritems():
@@ -115,9 +122,7 @@ def service_urls(records, service='odp:url'):
 
 
 def nearxy(x, y, xi, yi):
-    """
-    Find the indices x[i] of arrays (x,y) closest to the points (xi, yi).
-    """
+    """Find the indices x[i] of arrays (x,y) closest to the points (xi, yi)."""
     ind = np.ones(len(xi), dtype=int)
     dd = np.ones(len(xi), dtype='float')
     for i in np.arange(len(xi)):
@@ -128,9 +133,7 @@ def nearxy(x, y, xi, yi):
 
 
 def find_ij(x, y, d, xi, yi):
-    """
-    Find non-NaN cell d[j,i] that are closest to points (xi, yi).
-    """
+    """Find non-NaN cell d[j,i] that are closest to points (xi, yi)."""
     index = np.where(~np.isnan(d.flatten()))[0]
     ind, dd = nearxy(x.flatten()[index], y.flatten()[index], xi, yi)
     j, i = ind2ij(x, index[ind])
@@ -138,10 +141,8 @@ def find_ij(x, y, d, xi, yi):
 
 
 def find_timevar(cube):
-    """
-    Return the time variable from Iris. This is a workaround for iris having
-    problems with FMRC aggregations, which produce two time coordinates.
-    """
+    """Return the time variable from Iris. This is a workaround for iris having
+    problems with FMRC aggregations, which produce two time coordinates."""
     try:
         cube.coord(axis='T').rename('time')
     except:  # Be more specific.
@@ -151,24 +152,31 @@ def find_timevar(cube):
 
 
 def ind2ij(a, index):
-    """
-    Returns a[j, i] for a.ravel()[index].
-    """
+    """Returns a[j, i] for a.ravel()[index]."""
     n, m = a.shape
     j = np.int_(np.ceil(index//m))
     i = np.remainder(index, m)
     return i, j
 
 
-def get_coordinates(bounding_box, bounding_box_type):
-    """
-    Create bounding box coordinates for the leaflet map
-    """
+def get_coordinates(bounding_box, bounding_box_type=''):
+    """Create bounding box coordinates for the map."""
     coordinates = []
-    if bounding_box_type is "box":
+    if bounding_box_type == "box":
         coordinates.append([bounding_box[1], bounding_box[0]])
         coordinates.append([bounding_box[1], bounding_box[2]])
         coordinates.append([bounding_box[3], bounding_box[2]])
         coordinates.append([bounding_box[3], bounding_box[0]])
         coordinates.append([bounding_box[1], bounding_box[0]])
     return coordinates
+
+
+def inline_map(m):
+    """From http://nbviewer.ipython.org/gist/rsignell-usgs/
+    bea6c0fe00a7d6e3249c."""
+    m._build_map()
+    srcdoc = m.HTML.replace('"', '&quot;')
+    embed = HTML('<iframe srcdoc="{srcdoc}" '
+                 'style="width: 100%; height: 500px; '
+                 'border: none"></iframe>'.format(srcdoc=srcdoc))
+    return embed

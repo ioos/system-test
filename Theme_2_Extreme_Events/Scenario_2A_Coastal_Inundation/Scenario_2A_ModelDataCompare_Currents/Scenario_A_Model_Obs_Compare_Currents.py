@@ -17,7 +17,7 @@
 # * Obtain observation data sets from stations within the spatial boundaries
 # * Plot observation stations on a map (red marker if not enough data)
 # * Using DAP (model) endpoints find all available models data sets that fall in the area of interest, for the specified time range, and extract a model grid cell closest to all the given station locations
-# * Plot modelled and observed time series wave data on same axes for comparison
+# * Plot modelled and observed time series current data on same axes for comparison
 # 
 
 # <headingcell level=4>
@@ -41,7 +41,8 @@ from pyoos.collectors.ndbc.ndbc_sos import NdbcSos
 from pyoos.collectors.coops.coops_sos import CoopsSos
 import requests
 
-from utilities import date_range, coops2df, find_timevar, find_ij, nearxy, service_urls, mod_df, get_coordinates, get_NDBC_station_long_name
+from utilities import (date_range, coops2df, find_timevar, find_ij, nearxy, service_urls, mod_df, 
+                       get_coordinates, get_Coops_longName, inline_map)
 
 import cStringIO
 from lxml import etree
@@ -85,7 +86,7 @@ print start_date,'to',stop_date
 #put the names in a dict for ease of access 
 data_dict = {}
 sos_name = 'Currents'
-data_dict['currents'] = {"names":['currents','surface_eastward_sea_water_velocity','surface_northward_sea_water_velocity'], 
+data_dict['currents'] = {"names":['currents','surface_eastward_sea_water_velocity','*surface_eastward_sea_water_velocity*','surface_northward_sea_water_velocity'], 
                       "sos_name":['currents']}  
 
 # <headingcell level=3>
@@ -197,15 +198,21 @@ url.append(('http://sdf.ndbc.noaa.gov/sos/server.php?'
      'offering=urn:ioos:network:noaa.nws.ndbc:all&observedProperty=%s&'
      'responseFormat=text/csv&featureOfInterest=BBOX:%s&eventTime=latest') % (sos_name, box_str))
 
-url.append('http://opendap.co-ops.nos.noaa.gov/ioos-dif-sos/SOS?'
-       'service=SOS&request=GetObservation&version=1.0.0&'
-       'observedProperty=%s&offering=urn:ioos:network:noaa.nws.ndbc:all:'
-       '&featureOfInterest=BBOX:%s&responseFormat='
-       'text/csv&eventTime=%s' % (sos_name, box_str, iso_start))
+# url.append('http://opendap.co-ops.nos.noaa.gov/ioos-dif-sos/SOS?'
+#        'service=SOS&request=GetObservation&version=1.0.0&'
+#        'observedProperty=%s&offering=urn:ioos:network:noaa.nws.ndbc:all:'
+#        '&featureOfInterest=BBOX:%s&responseFormat='
+#        'text/csv&eventTime=%s') % (sos_name, box_str, iso_start)
 
 url.append('http://tidesandcurrents.noaa.gov/api/datagetter?'
-       'begin_date=20130101 10:00&end_date=20130101 10:24&station=8454000&product=water_level'
+       'begin_date=20130101&end_date=20130101&station=8454000&product=currents&bin=1'
        '&datum=mllw&units=metric&time_zone=gmt&application=web_services&format=csv')
+
+url.append(('http://opendap.co-ops.nos.noaa.gov/ioos-dif-sos/SOS?'
+       'service=SOS&request=GetObservation&version=1.0.0&'
+       'observedProperty=%s&bin=1&'
+       'offering=urn:ioos:network:NOAA.NOS.CO-OPS:CurrentsActive&'
+       'featureOfInterest=BBOX:%s&responseFormat=text/csv') % (sos_name, box_str))
 
 url.append(('http://sdf.ndbc.noaa.gov/sos/server.php?'
      'service=SOS&request=GetObservation&version=1.0.0&'
@@ -220,8 +227,8 @@ url.append(('http://sdf.ndbc.noaa.gov/sos/server.php?'
 #     'offering=urn:ioos:station:wmo:%s&observedProperty=%s&'
 #     'responseFormat=text/csv&eventTime=%s|%s&featureOfInterest=BBOX:%s') % (wmo_id,"waves",iso_start,iso_stop,box_str)
 
-print url[0]
-obs_loc_df = pd.read_csv(url[0])
+print url[1]
+obs_loc_df = pd.read_csv(url[1])
 
 # <codecell>
 
@@ -231,9 +238,11 @@ obs_loc_df.head()
 # <codecell>
 
 stations = [sta.split(':')[-1] for sta in obs_loc_df['station_id']]
-print stations
+print list(set(stations))
 obs_lon = [sta for sta in obs_loc_df['longitude (degree)']]
 obs_lat = [sta for sta in obs_loc_df['latitude (degree)']]
+print list(set(obs_lon))
+print list(set(obs_lat))
 
 # <headingcell level=3>
 
@@ -263,7 +272,7 @@ data_df = pd.read_csv(cStringIO.StringIO(str(response)), parse_dates=True, index
 #    data_df['Observed Data']=data_df['water_surface_height_above_reference_datum (m)']-data_df['vertical_position (m)']
 data_df['sea_water_speed (cm/s)'] = data_df['sea_water_speed (cm/s)']
 
-a = get_NDBC_station_long_name('46088')
+# a = get_NDBC_station_long_name('46088')
 if len(a) == 0:
     long_name = '46088'
 else:
@@ -289,40 +298,31 @@ obs_df[-1].name = b.name
 
 # <codecell>
 
-obs_df
-
-# <codecell>
-
 # Define minimum amount of data points to plot
 min_data_pts = 20
-
-#Embeds the HTML source of the map directly into the IPython notebook.
-def inline_map(map):   
-    map._build_map()
-    return HTML('<iframe srcdoc="{srcdoc}" style="width: 100%; height: 500px; border: none"></iframe>'.format(srcdoc=map.HTML.replace('"', '&quot;')))
 
 #find center of bounding box
 lat_center = abs(bounding_box[3] - bounding_box[1])/2 + bounding_box[1]
 lon_center = abs(bounding_box[0]-bounding_box[2])/2 + bounding_box[0]
-map = folium.Map(location=[lat_center, lon_center], zoom_start=5)
+m = folium.Map(location=[lat_center, lon_center], zoom_start=6)
 
 for n in range(len(obs_df)):
     #get the station data from the sos end point
-    shortname = obs_loc_df['station_id'][n].split(':')[-1]
+    shortname = obs_df['station_id'][n].split(':')[-1]
     longname = obs_df[n].name
-    lat = obs_loc_df['latitude (degree)'][n]
-    lon = obs_loc_df['longitude (degree)'][n]
+    lat = obs_df['latitude (degree)'][n]
+    lon = obs_df['longitude (degree)'][n]
     popup_string = ('<b>Station:</b><br>'+ longname)
     if len(obs_df[n]) > min_data_pts:
-        map.simple_marker([lat, lon], popup=popup_string)
+        m.simple_marker([lat, lon], popup=popup_string)
     else:
         #popup_string += '<br>No Data Available'
         popup_string += '<br>Not enough data available<br>requested pts: ' + str(min_data_pts ) + '<br>Available pts: ' + str(len(obs_df[n]))
-        map.circle_marker([lat, lon], popup=popup_string, fill_color='#ff0000', radius=10000, line_color='#ff0000')
+        m.circle_marker([lat, lon], popup=popup_string, fill_color='#ff0000', radius=10000, line_color='#ff0000')
+print type(bounding_box)
+m.line(get_coordinates(bounding_box, bounding_box_type), line_color='#FF0000', line_weight=5)
 
-map.line(get_coordinates(bounding_box,bounding_box_type), line_color='#FF0000', line_weight=5)
-
-inline_map(map)
+inline_map(m)
 
 # <codecell>
 
@@ -346,7 +346,7 @@ inline_map(map)
 
 # <codecell>
 
-print data_dict['currents']['names'][0:2]
+print data_dict['currents']['names']
 name_in_list = lambda cube: cube.standard_name in data_dict['currents']['names'][0:2]
 constraint = iris.Constraint(cube_func=name_in_list)
  
@@ -413,6 +413,90 @@ for url in dap_urls:
                             name = obs_df[n].name
                             obs_df[n] = pd.concat([obs_df[n], c], axis=1)
                             obs_df[n].name = name
+            elif len(r) == 1:
+                print('[Data]:', url)
+    except (ValueError, RuntimeError, CoordinateNotFoundError,
+            ConstraintMismatchError) as e:
+        warn("\n%s\n" % e)
+        pass
+
+# <codecell>
+
+# Create time index for model DataFrame
+ts_rng = pd.date_range(start=jd_start, end=jd_stop, freq='6Min')
+ts = pd.DataFrame(index=ts_rng)
+
+#Get the station lat/lon into lists and create list of model DataFrames for each station
+obs_lon = []
+obs_lat = []
+model_df = []
+for sta in station_list:
+    obs_lon.append(float(sta['longitude']))
+    obs_lat.append(float(sta['latitude']))
+    model_df.append(pd.DataFrame(index=ts.index))
+    model_df[-1].name = sta['long_name']
+
+# Use only data within 0.04 degrees (about 4 km).
+max_dist = 0.04
+# Use only data where the standard deviation of the time series exceeds 0.01 m (1 cm).
+# This eliminates flat line model time series that come from land points that should have had missing values.
+min_var = 0.01
+for url in dap_urls:
+    try:
+        print 'Attemping to load {0}'.format(url)
+        a = iris.load_cube(url, constraint)
+        # convert to units of meters
+        # a.convert_units('m')     # this isn't working for unstructured data
+        # take first 20 chars for model name
+        mod_name = a.attributes['title'][0:20]
+        r = a.shape
+        timevar = find_timevar(a)
+        lat = a.coord(axis='Y').points
+        lon = a.coord(axis='X').points
+        jd = timevar.units.num2date(timevar.points)
+        start = timevar.units.date2num(jd_start)
+        istart = timevar.nearest_neighbour_index(start)
+        stop = timevar.units.date2num(jd_stop)
+        istop = timevar.nearest_neighbour_index(stop)
+
+        # Only proceed if we have data in the range requested.
+        if istart != istop:
+            nsta = len(station_list)
+            if len(r) == 3:
+                print('[Structured grid model]:', url)
+                d = a[0, :, :].data
+                # Find the closest non-land point from a structured grid model.
+                if len(lon.shape) == 1:
+                    lon, lat = np.meshgrid(lon, lat)
+                j, i, dd = find_ij(lon, lat, d, obs_lon, obs_lat)
+                for n in range(nsta):
+                    # Only use if model cell is within 0.01 degree of requested
+                    # location.
+                    if dd[n] <= max_dist:
+                        arr = a[istart:istop, j[n], i[n]].data
+                        if arr.std() >= min_var:
+                            c = mod_df(arr, timevar, istart, istop,
+                                       mod_name, ts)
+                            name = station_list[n]['long_name']
+                            model_df[n] = pd.concat([model_df[n], c], axis=1)
+                            model_df[n].name = name
+                            
+            elif len(r) == 2:
+                print('[Unstructured grid model]:', url)
+                # Find the closest point from an unstructured grid model.
+                index, dd = nearxy(lon.flatten(), lat.flatten(),
+                                   obs_lon, obs_lat)
+                for n in range(nsta):
+                    # Only use if model cell is within 0.1 degree of requested
+                    # location.
+                    if dd[n] <= max_dist:
+                        arr = a[istart:istop, index[n]].data
+                        if arr.std() >= min_var:
+                            c = mod_df(arr, timevar, istart, istop,
+                                       mod_name, ts)
+                            name = station_list[n]['long_name']
+                            model_df[n] = pd.concat([model_df[n], c], axis=1)
+                            model_df[n].name = name
             elif len(r) == 1:
                 print('[Data]:', url)
     except (ValueError, RuntimeError, CoordinateNotFoundError,
