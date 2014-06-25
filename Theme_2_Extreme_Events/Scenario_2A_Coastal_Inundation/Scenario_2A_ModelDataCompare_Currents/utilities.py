@@ -5,6 +5,7 @@ Utility functions for Scenario_A_Model_Obs_Compare_Currents.ipynb
 from lxml import etree
 from io import BytesIO
 from warnings import warn
+import requests
 try:
     from urllib.request import urlopen
 except ImportError:
@@ -57,6 +58,38 @@ def get_Coops_longName(station):
     return longName[0]
 
 
+def coops2data(collector, station_id, sos_name):
+    """Extract the Observation Data from the collector."""
+    collector.features = [station_id]
+    collector.variables = [sos_name]
+    # station_data = dict()
+    data = dict()
+    # Loop through the years and get the data needed.
+    for year_station in range(int(collector.start_time.year),
+                              collector.end_time.year+1):
+        link = "http://tidesandcurrents.noaa.gov/api/datagetter?product="
+        link += sos_name + "&application=NOS.COOPS.TAC.WL&"
+        date1 = "begin_date="+str(year_station)+"0101"
+        date2 = "&end_date="+str(year_station)+"1231"
+        units = "&units=metric"
+        station_request = "&station=%s" % station_id
+        station_request += "&time_zone=GMT&units=english&format=json"
+        http_request = link + date1 + date2 + units + station_request
+        print(http_request)
+        d_r = requests.get(http_request, timeout=20)
+
+        key_list = d_r.json().keys()
+        if "data" in key_list:
+            data = d_r.json()['data']
+            # max_value, num_samples, date_string = findMaxVal(data)
+            # station_data[str(year_station)] = {"max": max_value,
+            #                                    "num_samples": num_samples,
+            #                                    "date_string": date_string,
+            #                                    "raw": data}
+                # print("\tyear:", year_station, " MaxValue:", max_value)
+    return data
+
+
 def coops2df(collector, coops_id, sos_name):
     """Request CSV response from SOS and convert to Pandas DataFrames."""
     collector.features = [coops_id]
@@ -68,10 +101,7 @@ def coops2df(collector, coops_id, sos_name):
         data_df = read_csv(BytesIO(response.encode('utf-8')),
                            parse_dates=True,
                            index_col='date_time')
-        col = 'water_surface_height_above_reference_datum (m)'
-        if False:
-            data_df['Observed Data'] = (data_df[col] -
-                                        data_df['vertical_position (m)'])
+        col = 'sea_water_speed (cm/s)'
         data_df['Observed Data'] = data_df[col]
     except ExceptionReport as e:
         warn("Station %s is not NAVD datum. %s" % (long_name, e))
