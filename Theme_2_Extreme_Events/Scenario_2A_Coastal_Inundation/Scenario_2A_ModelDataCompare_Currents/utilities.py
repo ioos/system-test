@@ -58,56 +58,18 @@ def get_Coops_longName(station):
     return longName[0]
 
 
-def coops2data(collector, station_id, sos_name):
-    """Extract the Observation Data from the collector."""
-    collector.features = [station_id]
-    collector.variables = [sos_name]
-    # station_data = dict()
-    data = dict()
-    # Loop through the years and get the data needed.
-    for year_station in range(int(collector.start_time.year),
-                              collector.end_time.year+1):
-        link = "http://tidesandcurrents.noaa.gov/api/datagetter?product="
-        link += sos_name + "&application=NOS.COOPS.TAC.WL&"
-        date1 = "begin_date="+str(year_station)+"0101"
-        date2 = "&end_date="+str(year_station)+"1231"
-        units = "&units=metric"
-        station_request = "&station=%s" % station_id
-        station_request += "&time_zone=GMT&units=english&format=json"
-        http_request = link + date1 + date2 + units + station_request
-        print(http_request)
-        d_r = requests.get(http_request, timeout=20)
-
-        key_list = d_r.json().keys()
-        if "data" in key_list:
-            data = d_r.json()['data']
-            # max_value, num_samples, date_string = findMaxVal(data)
-            # station_data[str(year_station)] = {"max": max_value,
-            #                                    "num_samples": num_samples,
-            #                                    "date_string": date_string,
-            #                                    "raw": data}
-                # print("\tyear:", year_station, " MaxValue:", max_value)
-    return data
-
-
-def coops2df(collector, coops_id, sos_name):
+def coops2df(collector, station_id, sos_name, iso_start, iso_end):
     """Request CSV response from SOS and convert to Pandas DataFrames."""
-    collector.features = [coops_id]
-    collector.variables = [sos_name]
-    long_name = get_Coops_longName(coops_id)
 
-    try:
-        response = collector.raw(responseFormat="text/csv")
-        data_df = read_csv(BytesIO(response.encode('utf-8')),
-                           parse_dates=True,
-                           index_col='date_time')
-        col = 'sea_water_speed (cm/s)'
-        data_df['Observed Data'] = data_df[col]
-    except ExceptionReport as e:
-        warn("Station %s is not NAVD datum. %s" % (long_name, e))
-        data_df = DataFrame()  # Assing an empty DataFrame for now.
-
+    long_name = get_Coops_longName(station_id)
+    url = (('http://opendap.co-ops.nos.noaa.gov/ioos-dif-sos/SOS?'
+            'service=SOS&request=GetObservation&version=1.0.0'
+            '&observedProperty=currents&offering=urn:ioos:station:NOAA.NOS.CO-OPS:%s'
+            '&responseFormat=text/csv&eventTime=%s/%s') % (str(station_id), iso_start, iso_end))
+    print url
+    data_df = read_csv(url, parse_dates=True, index_col='date_time')
     data_df.name = long_name
+
     return data_df
 
 

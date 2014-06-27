@@ -34,15 +34,15 @@ from IPython.display import HTML
 import iris
 from iris.exceptions import CoordinateNotFoundError, ConstraintMismatchError
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 from owslib.csw import CatalogueServiceWeb
 from owslib import fes
 import pandas as pd
-from pyoos.collectors.ndbc.ndbc_sos import NdbcSos
 from pyoos.collectors.coops.coops_sos import CoopsSos
 import requests
 
-from utilities import (date_range, coops2df, coops2data, find_timevar, find_ij, nearxy, service_urls, mod_df, 
-                       get_coordinates, get_Coops_longName, inline_map)
+from utilities import (date_range, coops2df, find_timevar, find_ij, nearxy, service_urls, mod_df, 
+                       get_coordinates, inline_map)
 
 import cStringIO
 from lxml import etree
@@ -60,7 +60,7 @@ bounding_box_type = "box"
 area = {'Hawaii': [-160.0, 18.0, -154., 23.0],
         'Gulf of Maine': [-72.0, 41.0, -69.0, 43.0],
         'New York harbor region': [-75., 39., -71., 41.5],
-        'Puerto Rico': [-71, 14, -60, 24],
+        'Puerto Rico': [-75, 12, -55, 26],
         'East Coast': [-77, 34, -70, 40],
         'North West': [-130, 38, -121, 50]}
 
@@ -86,7 +86,7 @@ print start_date,'to',stop_date
 #put the names in a dict for ease of access 
 data_dict = {}
 sos_name = 'Currents'
-data_dict['currents'] = {"names":['currents','surface_eastward_sea_water_velocity','*surface_eastward_sea_water_velocity*'], 
+data_dict['currents'] = {"names":['currents','surface_eastward_sea_water_velocity','*surface_eastward_sea_water_velocity*', 'current_speed'], 
                       "sos_name":['currents']}  
 
 # <headingcell level=3>
@@ -138,7 +138,7 @@ dap_urls = service_urls(csw.records)
 dap_urls = sorted(set(dap_urls))
 print "Total DAP:",len(dap_urls)
 #print the first 5...
-print "\n".join(dap_urls[0:8])
+print "\n".join(dap_urls)
 
 # <markdowncell>
 
@@ -175,14 +175,12 @@ collector.variables = data_dict["currents"]["sos_name"]
 collector.server.identification.title
 print collector.start_time,":", collector.end_time
 ofrs = collector.server.offerings
-print(len(ofrs))
 #for p in ofrs[700:710]:
 #    print(p)
 
 # <markdowncell>
 
 # ###Find all SOS stations within the bounding box and time extent
-# The time extent (iso_start) must be a match a timestamp in the data set. This buoy collects data hourly at the 50 minute mark.
 
 # <codecell>
 
@@ -206,10 +204,6 @@ obs_loc_df.head()
 
 # <codecell>
 
-obs_loc_df.loc[obs_loc_df['bin (count)']==1,:]
-
-# <codecell>
-
 # Index the data frame to filter repeats by bin #
 stations = [sta.split(':')[-1] for sta in obs_loc_df['station_id']]
 
@@ -222,111 +216,30 @@ obs_lat = [sta for sta in obs_loc_df['latitude (degree)']]
 
 # <codecell>
 
-def coops2data2(collector, station_id, sos_name):
-    """Extract the Observation Data from the collector."""
-    collector.features = [station_id]
-    collector.variables = [sos_name]
-    long_name = get_Coops_longName(station_id)
-    
-#     # Get the data!
-#     link = "http://tidesandcurrents.noaa.gov/api/datagetter?product="
-#     link += sos_name + "&application=NOS.COOPS.TAC.WL&"
-#     date1 = "begin_date="+jd_start.strftime('%Y%m%d')
-#     date2 = "&end_date="+jd_stop.strftime('%Y%m%d')
-#     units = "&units=metric"
-#     station_request = "&station=%s" % station_id
-#     station_request += "&time_zone=GMT&units=english&format=csv"
-#     http_request = link + date1 + date2 + units + station_request
-    
-    url = (('http://opendap.co-ops.nos.noaa.gov/ioos-dif-sos/SOS?'
-       'service=SOS&request=GetObservation&version=1.0.0'
-       '&observedProperty=currents&offering=urn:ioos:station:NOAA.NOS.CO-OPS:%s'
-       '&responseFormat=text/csv&eventTime=%s/%s') % (str(station_id),iso_start, iso_end))
-    
-    print url
-#     response = collector.raw(responseFormat="text/csv")
-#     data_df = read_csv(BytesIO(response.encode('utf-8')),
-#                            parse_dates=True,
-#                            index_col='date_time')
-#     data_df = pd.read_csv(http_request,
-#                           parse_dates=True,
-#                           index_col='Date Time')
-    data_df = pd.read_csv(url, parse_dates=True, index_col='date_time')
-#     col = 'sea_water_speed (cm/s)'
-#     data_df['Observed Data'] = data_df[col]
-    data_df.name = long_name
-    return data_df
-
-# <codecell>
-
-# ts_rng = pd.date_range(start=start_date, end=stop_date)
-# ts = pd.DataFrame(index=ts_rng)
-
 obs_df = []
+current_speed_df = []
 sta_names = []
 sta_failed = []
 for sta in stations:
     try:
-        df = coops2data2(collector, sta, sos_name)
+        df = coops2df(collector, sta, sos_name, iso_start, iso_end)
     except Exception as e:
         print "Error" + str(e)
         continue
-#     print b
+
     name = df.name
     sta_names.append(name)
-    if df.empty:
-        sta_failed.append(name)
-        df = DataFrame(np.arange(len(ts)) * np.NaN, index=ts.index, columns=['Observed Data'])
-        df.name = name
-    # Limit interpolation to 10 points (10 @ 6min = 1 hour).
-#     col = 'sea_water_speed (cm/s)'
-#     concatenated = pd.concat([b, ts], axis=1).interpolate(limit=10)[col]
-#     obs_df.append(pd.DataFrame(concatenated))
-#     pieces = pd.concat([df['sea_water_speed (cm/s)'], df[3:7]])
-#     obs_df.append(pd.DataFrame(df[col]))
-    # Now split up the data frame into bins
-#     num_bins = max(df['bin (count)'].values)
+#     if df.empty:
+#         sta_failed.append(name)
+#         df = DataFrame(np.arange(len(ts)) * np.NaN, index=ts.index, columns=['Observed Data'])
+#         df.name = name
     obs_df.append(df)
     obs_df[-1].name = name
-
-
-
-# <codecell>
-
-# print df
-num_bins = max(df['bin (count)'].values)
-new_df = []
-
-for n in range(num_bins):
-    new_df.append(obs_df[0].loc[obs_df[0]['bin (count)']==(n+1),'sea_water_speed (cm/s)'])
     
-    new_df[-1].name = obs_df[0].name
+    # Create a separate dataframe for only sea water speed
+    current_speed_df.append(pd.DataFrame(df['sea_water_speed (cm/s)']))
+    current_speed_df[-1].name = name
 
-print new_df[0:1]
-# print max(obs_df[0]['bin (count)'].values)
-# obs_df[0].loc[obs_df[0]['bin (count)']==1,:]
-# print new_df[0:2]
-for df2 in new_df:
-    ax = df2.plot(figsize=(14, 6), title=df2.name, legend=False)
-    plt.setp(ax.lines[0], linewidth=4.0, zorder=1)
-    ax.legend()
-    ax.set_ylabel('Current Speed (cm/s)')
-    
-
-# <codecell>
-
-start = df.index.searchsorted(jd_start)
-stop = df.index.searchsorted(jd_start+dt.timedelta(minutes=6))
-sliced = df.ix[start:stop]
-print sliced
-
-# <codecell>
-
-for df in obs_df:
-    ax = df.plot(figsize=(14, 6), title=df.name, legend=False)
-    plt.setp(ax.lines[0], linewidth=4.0, zorder=1)
-    ax.legend()
-    ax.set_ylabel('Current Speed (cm/s)')
 
 # <codecell>
 
@@ -334,7 +247,7 @@ min_data_pts = 0
 #find center of bounding box
 lat_center = abs(bounding_box[3] - bounding_box[1])/2 + bounding_box[1]
 lon_center = abs(bounding_box[0]-bounding_box[2])/2 + bounding_box[0]
-m = folium.Map(location=[lat_center, lon_center], zoom_start=6)
+m = folium.Map(location=[lat_center, lon_center], zoom_start=5)
 
 for n in range(len(stations)):
     #get the station data from the sos end point
@@ -354,6 +267,59 @@ print type(bounding_box)
 m.line(get_coordinates(bounding_box, bounding_box_type), line_color='#FF0000', line_weight=5)
 
 inline_map(m)
+
+# <markdowncell>
+
+# ### Plot current speeds as a function of time and depth
+
+# <codecell>
+
+for df in obs_df:
+    num_bins = df['number_of_bins'][0]
+    depth = df['bin_distance (m)'].values[0:num_bins]
+    time = df.loc[df['bin (count)']==(1)].index.values
+    xdates = [dt.datetime.strptime(str(date).split('.')[0],'%Y-%m-%dT%H:%M:%S') for date in time]
+    dates = mdates.date2num(xdates)
+    # print time
+    
+    # Extract data from each depth bin to create a 2D matrix of current speeds (depth x time)
+    data = np.zeros((num_bins, len(df.index)/num_bins))
+    for n in range(num_bins):
+        data[n,:] = df.loc[df['bin (count)']==(n+1),'sea_water_speed (cm/s)'].values
+
+    fig, ax = plt.subplots(figsize=(12, 6))
+    
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%m/%d/%Y'))
+    ax.xaxis.set_major_locator(mdates.DayLocator())
+    im = ax.pcolor(dates, depth, data, vmin=abs(data).min(), vmax=abs(data).max())
+    cb = fig.colorbar(im, ax=ax)
+    ax.set_ylabel = 'Depth (m)'
+    ax.set_title = df.name
+    ax.invert_yaxis()
+    
+#     # Only plot the first bin
+#     ax[1] = df.loc[df['bin (count)']==(1),'sea_water_speed (cm/s)'].plot(figsize=(14, 6), title=df.name, legend=False)
+# #     plt.setp(ax[0].lines[0], linewidth=1.0, zorder=1)
+#     ax[1].legend()
+#     ax[1].set_ylabel('Current Speed (cm/s)')
+    
+    
+    
+
+# <markdowncell>
+
+# ### Plot surface current speeds as a time series
+
+# <codecell>
+
+# break the current speed data frame into data frames by bin
+for df in obs_df:
+    figure()
+    # Only plot the first bin
+    ax = df.loc[df['bin (count)']==(1),'sea_water_speed (cm/s)'].plot(figsize=(14, 6), title=df.name, legend=False)
+    plt.setp(ax.lines[0], linewidth=1.0, zorder=1)
+    ax.legend()
+    ax.set_ylabel('Current Speed (cm/s)')
 
 # <markdowncell>
 
