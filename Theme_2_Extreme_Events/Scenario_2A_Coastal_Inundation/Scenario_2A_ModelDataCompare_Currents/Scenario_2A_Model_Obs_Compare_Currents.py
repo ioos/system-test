@@ -42,11 +42,7 @@ from pyoos.collectors.coops.coops_sos import CoopsSos
 import requests
 
 from utilities import (date_range, coops2df, find_timevar, find_ij, nearxy, service_urls, mod_df, 
-                       get_coordinates, inline_map)
-
-import cStringIO
-from lxml import etree
-import urllib2
+                       get_coordinates, inline_map, get_Coops_longName)
 
 # <headingcell level=4>
 
@@ -61,10 +57,10 @@ area = {'Hawaii': [-160.0, 18.0, -154., 23.0],
         'Gulf of Maine': [-72.0, 41.0, -69.0, 43.0],
         'New York harbor region': [-75., 39., -71., 41.5],
         'Puerto Rico': [-75, 12, -55, 26],
-        'East Coast': [-77, 34, -70, 40],
+        'East Coast': [-77, 36, -73, 38],
         'North West': [-130, 38, -121, 50]}
 
-bounding_box = area['North West']
+bounding_box = area['East Coast']
 
 #temporal range
 jd_now = dt.datetime.utcnow()
@@ -86,8 +82,10 @@ print start_date,'to',stop_date
 #put the names in a dict for ease of access 
 data_dict = {}
 sos_name = 'Currents'
-data_dict['currents'] = {"names":['currents','surface_eastward_sea_water_velocity','*surface_eastward_sea_water_velocity*', 'current_speed'], 
-                      "sos_name":['currents']}  
+data_dict['currents'] = {
+ "u_names":['eastward_sea_water_velocity_assuming_no_tide','surface_eastward_sea_water_velocity','*surface_eastward_sea_water_velocity*', 'eastward_sea_water_velocity'], 
+ "v_names":['northward_sea_water_velocity_assuming_no_tide','surface_northward_sea_water_velocity','*surface_northward_sea_water_velocity*', 'northward_sea_water_velocity'],
+ "sos_name":['currents']}  
 
 # <headingcell level=3>
 
@@ -95,7 +93,11 @@ data_dict['currents'] = {"names":['currents','surface_eastward_sea_water_velocit
 
 # <codecell>
 
+# endpoint = 'http://geo.gov.ckan.org/csw'            # data.gov
+# endpoint = 'https://data.noaa.gov/csw'              # data.noaa.gov
+# endpoint = 'http://www.nodc.noaa.gov/geoportal/csw' # nodc
 endpoint = 'http://www.ngdc.noaa.gov/geoportal/csw' # NGDC Geoportal
+
 csw = CatalogueServiceWeb(endpoint,timeout=60)
 
 for oper in csw.operations:
@@ -111,7 +113,7 @@ bbox = fes.BBox(bounding_box)
 
 #use the search name to create search filter
 or_filt = fes.Or([fes.PropertyIsLike(propertyname='apiso:AnyText',literal=('*%s*' % val),
-                    escapeChar='\\',wildCard='*',singleChar='?') for val in data_dict['currents']['names']])
+                    escapeChar='\\',wildCard='*',singleChar='?') for val in data_dict['currents']['u_names']])
 
 val = 'Averages'
 not_filt = fes.Not([fes.PropertyIsLike(propertyname='apiso:AnyText',
@@ -136,8 +138,9 @@ for rec, item in csw.records.items():
 dap_urls = service_urls(csw.records)
 #remove duplicates and organize
 dap_urls = sorted(set(dap_urls))
+print type(dap_urls)
+dap_urls = dap_urls[-1:]
 print "Total DAP:",len(dap_urls)
-#print the first 5...
 print "\n".join(dap_urls)
 
 # <markdowncell>
@@ -216,6 +219,27 @@ obs_lat = [sta for sta in obs_loc_df['latitude (degree)']]
 
 # <codecell>
 
+def coops2df(collector, station_id, sos_name, iso_start, iso_end):
+    """Request CSV response from SOS and convert to Pandas DataFrames."""
+    url = (('http://opendap.co-ops.nos.noaa.gov/ioos-dif-sos/SOS?'
+            'service=SOS&request=GetObservation&version=1.0.0&'
+            'observedProperty=currents&offering=urn:ioos:station:NOAA.NOS.CO-OPS:%s&'
+            'procedure=urn:ioos:sensor:NOAA.NOS.CO-OPS:%s:Nortek-ADP-511:rtb&'
+            'responseFormat=text/csv&eventTime=%s/%s') % (str(station_id), str(station_id),iso_start, iso_end))
+    
+    long_name = get_Coops_longName(station_id)
+    url = (('http://opendap.co-ops.nos.noaa.gov/ioos-dif-sos/SOS?'
+            'service=SOS&request=GetObservation&version=1.0.0'
+            '&observedProperty=currents&offering=urn:ioos:station:NOAA.NOS.CO-OPS:%s'
+            '&responseFormat=text/csv&eventTime=%s/%s') % (str(station_id), iso_start, iso_end))
+    print url
+    data_df = pd.read_csv(url, parse_dates=True, index_col='date_time')
+    data_df.name = long_name
+
+    return data_df
+
+# <codecell>
+
 obs_df = []
 current_speed_df = []
 sta_names = []
@@ -243,11 +267,10 @@ for sta in stations:
 
 # <codecell>
 
-min_data_pts = 0
 #find center of bounding box
 lat_center = abs(bounding_box[3] - bounding_box[1])/2 + bounding_box[1]
 lon_center = abs(bounding_box[0]-bounding_box[2])/2 + bounding_box[0]
-m = folium.Map(location=[lat_center, lon_center], zoom_start=5)
+m = folium.Map(location=[lat_center, lon_center], zoom_start=7)
 
 for n in range(len(stations)):
     #get the station data from the sos end point
@@ -270,7 +293,7 @@ inline_map(m)
 
 # <markdowncell>
 
-# ### Plot current speeds as a function of time and depth
+# ### Plot current speeds as a function of time and distance from sensor
 
 # <codecell>
 
@@ -293,9 +316,9 @@ for df in obs_df:
     ax.xaxis.set_major_locator(mdates.DayLocator())
     im = ax.pcolor(dates, depth, data, vmin=abs(data).min(), vmax=abs(data).max())
     cb = fig.colorbar(im, ax=ax)
-    ax.set_ylabel = 'Depth (m)'
+    ax.set_ylabel = 'bin_distance (m)'
     ax.set_title = df.name
-    ax.invert_yaxis()
+#     ax.invert_yaxis()
     
 #     # Only plot the first bin
 #     ax[1] = df.loc[df['bin (count)']==(1),'sea_water_speed (cm/s)'].plot(figsize=(14, 6), title=df.name, legend=False)
@@ -328,231 +351,150 @@ for df in obs_df:
 
 # <codecell>
 
-print data_dict['currents']['names']
-name_in_list = lambda cube: cube.standard_name in data_dict['currents']['names']
-constraint = iris.Constraint(cube_func=name_in_list)
+name_in_list = lambda cube: cube.standard_name in data_dict['currents']['u_names']
+u_constraint = iris.Constraint(cube_func=name_in_list)
+
+name_in_list = lambda cube: cube.standard_name in data_dict['currents']['v_names']
+v_constraint = iris.Constraint(cube_func=name_in_list)
  
 
 # <codecell>
 
-# Use only data within 0.04 degrees (about 4 km).
-max_dist = 0.04
-# Use only data where the standard deviation of the time series exceeds 0.01 m (1 cm).
-# This eliminates flat line model time series that come from land points that should have had missing values.
-min_var = 0.01
-for url in dap_urls:
+url='http://hfrnet.ucsd.edu/thredds/dodsC/HFRNet/USWC/6km/hourly/RTV'
+url = 'http://www.smast.umassd.edu:8080/thredds/dodsC/FVCOM/NECOFS/Forecasts/NECOFS_GOM3_FORECAST.nc'
+extent=[-130,-114,32,48]
+mytime=dt.datetime.utcnow() - dt.timedelta(hours=6)      # .... or some hours from now
+def time_near(cube,start):
+    #    coord_names = [coord.name() for coord in cube.coords()]
+    #    timevar = cube.coord(coord_names[0]))
+    timevar=cube.coord('time')
     try:
-        a = iris.load_cube(url, constraint)
-        # convert to units of meters
-        # a.convert_units('m')     # this isn't working for unstructured data
-        # take first 20 chars for model name
-        mod_name = a.attributes['title'][0:20]
-        r = a.shape
-        timevar = find_timevar(a)
-        lat = a.coord(axis='Y').points
-        lon = a.coord(axis='X').points
-        jd = timevar.units.num2date(timevar.points)
-        start = timevar.units.date2num(jd_start)
-        istart = timevar.nearest_neighbour_index(start)
-        stop = timevar.units.date2num(jd_stop)
-        istop = timevar.nearest_neighbour_index(stop)
+        itime = timevar.nearest_neighbour_index(timevar.units.date2num(start))
+    except:
+        itime = -1
+    return timevar.points[itime]
 
-        # Only proceed if we have data in the range requested.
-        if istart != istop:
-            nsta = len(obs_lon)
-            if len(r) == 3:
-                print('[Structured grid model]:', url)
-                d = a[0, :, :].data
-                # Find the closest non-land point from a structured grid model.
-                if len(lon.shape) == 1:
-                    lon, lat = np.meshgrid(lon, lat)
-                j, i, dd = find_ij(lon, lat, d, obs_lon, obs_lat)
-                for n in range(nsta):
-                    # Only use if model cell is within 0.1 degree of requested
-                    # location.
-                    if dd[n] <= max_dist:
-                        arr = a[istart:istop, j[n], i[n]].data
-                        if arr.std() >= min_var:
-                            c = mod_df(arr, timevar, istart, istop,
-                                       mod_name, ts)
-                            name = obs_df[n].name
-                            obs_df[n] = concat([obs_df[n], c], axis=1)
-                            obs_df[n].name = name
-            elif len(r) == 2:
-                print('[Unstructured grid model]:', url)
-                # Find the closest point from an unstructured grid model.
-                index, dd = nearxy(lon.flatten(), lat.flatten(),
-                                   obs_lon, obs_lat)
-                for n in range(nsta):
-                    # Only use if model cell is within 0.1 degree of requested
-                    # location.
-                    if dd[n] <= max_dist:
-                        arr = a[istart:istop, index[n]].data
-                        if arr.std() >= min_var:
-                            c = mod_df(arr, timevar, istart, istop,
-                                       mod_name, ts)
-                            name = obs_df[n].name
-                            obs_df[n] = concat([obs_df[n], c], axis=1)
-                            obs_df[n].name = name
-            elif len(r) == 1:
-                print('[Data]:', url)
-    except (ValueError, RuntimeError, CoordinateNotFoundError,
-            ConstraintMismatchError) as e:
-        warn("\n%s\n" % e)
-        pass
+u = iris.load_cube(url,u_constraint)
+v = iris.load_cube(url,v_constraint)
+lon = v.coord(axis='X').points
+lat = v.coord(axis='Y').points
+uslice = u.extract(iris.Constraint(time=time_near(u,mytime)))
+vslice = v.extract(iris.Constraint(time=time_near(v,mytime)))
+U= uslice.data
+V= vslice.data
+print uslice
+print vslice
 
 # <codecell>
 
-print obs_df
-
-# <codecell>
-
-# Use only data within 0.04 degrees (about 4 km).
-max_dist = 0.04
-# Use only data where the standard deviation of the time series exceeds 0.01 m (1 cm).
-# This eliminates flat line model time series that come from land points that should have had missing values.
-min_var = 0.01
-for url in dap_urls:
-    print url
-    try:
-        a = iris.load_cube(url, constraint)
-        # convert to units of meters
-        # a.convert_units('m')     # this isn't working for unstructured data
-        # take first 20 chars for model name
-        mod_name = a.attributes['title'][0:20]
-        r = a.shape
-        timevar = find_timevar(a)
-        lat = a.coord(axis='Y').points
-        lon = a.coord(axis='X').points
-        jd = timevar.units.num2date(timevar.points)
-        start = timevar.units.date2num(jd_start)
-        istart = timevar.nearest_neighbour_index(start)
-        stop = timevar.units.date2num(jd_stop)
-        istop = timevar.nearest_neighbour_index(stop)
-
-        # Only proceed if we have data in the range requested.
-        if istart != istop:
-            nsta = len(obs_lon)
-            if len(r) == 3:
-                print('[Structured grid model]:', url)
-                d = a[0, :, :].data
-                # Find the closest non-land point from a structured grid model.
-                if len(lon.shape) == 1:
-                    lon, lat = np.meshgrid(lon, lat)
-                j, i, dd = find_ij(lon, lat, d, obs_lon, obs_lat)
-                for n in range(nsta):
-                    # Only use if model cell is within 0.01 degree of requested
-                    # location.
-                    if dd[n] <= max_dist:
-                        arr = a[istart:istop, j[n], i[n]].data
-                        if arr.std() >= min_var:
-                            c = mod_df(arr, timevar, istart, istop,
-                                       mod_name, ts)
-                            name = obs_df[n].name
-                            obs_df[n] = pd.concat([obs_df[n], c], axis=1)
-                            obs_df[n].name = name
-            elif len(r) == 2:
-                print('[Unstructured grid model]:', url)
-                # Find the closest point from an unstructured grid model.
-                index, dd = nearxy(lon.flatten(), lat.flatten(),
-                                   obs_lon, obs_lat)
-                for n in range(nsta):
-                    # Only use if model cell is within 0.1 degree of requested
-                    # location.
-                    if dd[n] <= max_dist:
-                        arr = a[istart:istop, index[n]].data
-                        if arr.std() >= min_var:
-                            c = mod_df(arr, timevar, istart, istop,
-                                       mod_name, ts)
-                            name = obs_df[n].name
-                            obs_df[n] = pd.concat([obs_df[n], c], axis=1)
-                            obs_df[n].name = name
-            elif len(r) == 1:
-                print('[Data]:', url)
-    except (ValueError, RuntimeError, CoordinateNotFoundError,
-            ConstraintMismatchError) as e:
-        warn("\n%s\n" % e)
-        pass
-
-# <codecell>
-
-# Create time index for model DataFrame
+# # Create time index for model DataFrame
 ts_rng = pd.date_range(start=jd_start, end=jd_stop, freq='6Min')
 ts = pd.DataFrame(index=ts_rng)
 
-#Get the station lat/lon into lists and create list of model DataFrames for each station
-obs_lon = []
-obs_lat = []
+# Create list of model DataFrames for each station
 model_df = []
-for sta in station_list:
-    obs_lon.append(float(sta['longitude']))
-    obs_lat.append(float(sta['latitude']))
+for df in obs_df:
     model_df.append(pd.DataFrame(index=ts.index))
-    model_df[-1].name = sta['long_name']
+    model_df[-1].name = df.name
 
 # Use only data within 0.04 degrees (about 4 km).
-max_dist = 0.04
+max_dist = 5
 # Use only data where the standard deviation of the time series exceeds 0.01 m (1 cm).
 # This eliminates flat line model time series that come from land points that should have had missing values.
 min_var = 0.01
 for url in dap_urls:
+    if 'hfrnet' in url:
+        print 'Skipping HF Radar Obs Data'
+        continue
     try:
         print 'Attemping to load {0}'.format(url)
-        a = iris.load_cube(url, constraint)
+        u = iris.load_cube(url, u_constraint)
+        v = iris.load_cube(url, v_constraint)
         # convert to units of meters
         # a.convert_units('m')     # this isn't working for unstructured data
         # take first 20 chars for model name
-        mod_name = a.attributes['title'][0:20]
-        r = a.shape
-        timevar = find_timevar(a)
-        lat = a.coord(axis='Y').points
-        lon = a.coord(axis='X').points
+        mod_name = u.attributes['title'][0:20]
+        r = u.shape
+        timevar = find_timevar(u)
+        lat = u.coord(axis='Y').points
+        lon = u.coord(axis='X').points
         jd = timevar.units.num2date(timevar.points)
         start = timevar.units.date2num(jd_start)
         istart = timevar.nearest_neighbour_index(start)
         stop = timevar.units.date2num(jd_stop)
         istop = timevar.nearest_neighbour_index(stop)
+        print r
+        
+        uslice = u.extract(iris.Constraint(time=timevar.points[istart]))
+        vslice = v.extract(iris.Constraint(time=timevar.points[istart]))
+#         U= uslice.data
+#         V= vslice.data
 
-        # Only proceed if we have data in the range requested.
-        if istart != istop:
-            nsta = len(station_list)
-            if len(r) == 3:
-                print('[Structured grid model]:', url)
-                d = a[0, :, :].data
-                # Find the closest non-land point from a structured grid model.
-                if len(lon.shape) == 1:
-                    lon, lat = np.meshgrid(lon, lat)
-                j, i, dd = find_ij(lon, lat, d, obs_lon, obs_lat)
-                for n in range(nsta):
-                    # Only use if model cell is within 0.01 degree of requested
-                    # location.
-                    if dd[n] <= max_dist:
-                        arr = a[istart:istop, j[n], i[n]].data
-                        if arr.std() >= min_var:
-                            c = mod_df(arr, timevar, istart, istop,
-                                       mod_name, ts)
-                            name = station_list[n]['long_name']
-                            model_df[n] = pd.concat([model_df[n], c], axis=1)
-                            model_df[n].name = name
+        d = u[0, :, :].data
+        if len(lon.shape) == 1:
+            lon, lat = np.meshgrid(lon, lat)
+        j, i, dd = find_ij(lon, lat, d, obs_lon, obs_lat)
+        print d
+
+#         # Only proceed if we have data in the range requested.
+#         if istart != istop:
+#             nsta = len(stations)
+#             if len(r) == 3:
+#                 print('[Structured grid model]:', url)
+#                 d = u[0, :, :].data
+#                 # Find the closest non-land point from a structured grid model.
+#                 if len(lon.shape) == 1:
+#                     lon, lat = np.meshgrid(lon, lat)
+#                 j, i, dd = find_ij(lon, lat, d, obs_lon, obs_lat)
+#                 for n in range(nsta):
+#                     # Only use if model cell is within 0.01 degree of requested
+#                     # location.
+#                     if dd[n] <= max_dist:
+#                         try:
+#                             len(j)
+#                         except:
+#                             j = [j]
+#                         try:
+#                             len(i)
+#                         except:
+#                             i = [i]
+#                         arr = u[istart:istop, j[n], i[n]].data
+#                         if arr.std() >= min_var:
+#                             c = mod_df(arr, timevar, istart, istop,
+#                                        mod_name, ts)
+#                             name = obs_df[n].name
+#                             model_df[n] = pd.concat([model_df[n], c], axis=1)
+#                             model_df[n].name = name
+#                         else:
+#                             print 'min_var error'
+#                     else:
+#                         print 'Max dist error'
                             
-            elif len(r) == 2:
-                print('[Unstructured grid model]:', url)
-                # Find the closest point from an unstructured grid model.
-                index, dd = nearxy(lon.flatten(), lat.flatten(),
-                                   obs_lon, obs_lat)
-                for n in range(nsta):
-                    # Only use if model cell is within 0.1 degree of requested
-                    # location.
-                    if dd[n] <= max_dist:
-                        arr = a[istart:istop, index[n]].data
-                        if arr.std() >= min_var:
-                            c = mod_df(arr, timevar, istart, istop,
-                                       mod_name, ts)
-                            name = station_list[n]['long_name']
-                            model_df[n] = pd.concat([model_df[n], c], axis=1)
-                            model_df[n].name = name
-            elif len(r) == 1:
-                print('[Data]:', url)
+#             elif len(r) == 2:
+#                 print('[Unstructured grid model]:', url)
+#                 # Find the closest point from an unstructured grid model.
+#                 index, dd = nearxy(lon.flatten(), lat.flatten(),
+#                                    obs_lon, obs_lat)
+#                 for n in range(nsta):
+#                     # Only use if model cell is within 0.1 degree of requested
+#                     # location.
+#                     if dd[n] <= max_dist:
+#                         arr = u[istart:istop, index[n]].data
+#                         print arr
+#                         if arr.std() >= min_var:
+#                             c = mod_df(arr, timevar, istart, istop,
+#                                        mod_name, ts)
+#                             name = obs_df[n].name
+#                             model_df[n] = pd.concat([model_df[n], c], axis=1)
+#                             model_df[n].name = name
+#                         else:
+#                             print 'min_var error'
+#                     else:
+#                         print 'Max dist error'
+#             elif len(r) == 1:
+#                 print('[Data]:', url)
+#         else:
+#             print 'No data in range'
     except (ValueError, RuntimeError, CoordinateNotFoundError,
             ConstraintMismatchError) as e:
         warn("\n%s\n" % e)
@@ -560,7 +502,6 @@ for url in dap_urls:
 
 # <codecell>
 
-print obs_df
 
 # <markdowncell>
 

@@ -57,9 +57,13 @@ def get_Coops_longName(station):
         longName = station
     return longName[0]
 
-
 def coops2df(collector, station_id, sos_name, iso_start, iso_end):
     """Request CSV response from SOS and convert to Pandas DataFrames."""
+    # url = (('http://opendap.co-ops.nos.noaa.gov/ioos-dif-sos/SOS?'
+    #         'service=SOS&request=GetObservation&version=1.0.0&'
+    #         'observedProperty=currents&offering=urn:ioos:station:NOAA.NOS.CO-OPS:%s&'
+    #         'procedure=urn:ioos:sensor:NOAA.NOS.CO-OPS:%s:Nortek-ADP-511:rtb&'
+    #         'responseFormat=text/csv&eventTime=%s/%s') % (str(station_id), str(station_id),iso_start, iso_end))
 
     long_name = get_Coops_longName(station_id)
     url = (('http://opendap.co-ops.nos.noaa.gov/ioos-dif-sos/SOS?'
