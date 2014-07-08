@@ -13,7 +13,7 @@ The ability to quickly and easily integrate these complementary datasets and pre
 ### Overview
 There is a total of 10 notebooks available for Theme 2 Scenario 2A - Coastal Inundation
 
-#### Inundation
+#### Inundation Notebooks
 | Status   | Extreme | Model/Obs  |
 |----------|:---------:|:------------:|
 | Started  | ![alt text](http://openclipart.org/image/20px/svg_to_png/159733/green-tick.png)| ![alt text](http://openclipart.org/image/20px/svg_to_png/159733/green-tick.png)|
@@ -21,3 +21,31 @@ There is a total of 10 notebooks available for Theme 2 Scenario 2A - Coastal Inu
 |Complete| ![alt text](http://openclipart.org/image/20px/svg_to_png/159733/green-tick.png)| ![alt text](http://openclipart.org/image/20px/svg_to_png/159733/green-tick.png)
 |Reviewed|  | ![alt text](http://openclipart.org/image/20px/svg_to_png/159733/green-tick.png)
 
+#### Waves Notebooks
+| Status   | Extreme | Model/Obs  |
+|----------|:---------:|:------------:|
+| Started  | ![alt text](http://openclipart.org/image/20px/svg_to_png/159733/green-tick.png)  |  ![alt text](http://openclipart.org/image/20px/svg_to_png/159733/green-tick.png)
+|Progress Report Created| | ![alt text](http://openclipart.org/image/20px/svg_to_png/159733/green-tick.png)
+|Complete| |  ![alt text](http://openclipart.org/image/20px/svg_to_png/159733/green-tick.png)
+|Reviewed| |
+
+
+#### Currents Notebooks
+| Status   | Extreme | Model/Obs  |
+|----------|:---------:|:------------:|
+| Started  | ![alt text](http://openclipart.org/image/20px/svg_to_png/159733/green-tick.png)  |   ![alt text](http://openclipart.org/image/20px/svg_to_png/159733/green-tick.png)
+|Progress Report Created| |
+|Complete| |
+|Reviewed| |
+
+#### Winds Notebooks
+| Status   | Extreme | Model/Obs  |
+|----------|:---------:|:------------:|
+| Started  | | 
+|Progress Report Created| |
+|Complete| |
+|Reviewed| |
+
+#### Additional Notebooks
+
+TBD
