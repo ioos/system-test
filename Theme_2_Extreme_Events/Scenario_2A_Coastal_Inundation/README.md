@@ -15,7 +15,7 @@ There is a total of 10 notebooks available for Theme 2 Scenario 2A - Coastal Inu
 
 #### Inundation
 | Status   | Extreme | Model/Obs  |
-|----------|---------|------------|
+|----------|:---------:|:------------:|
 | Started  | ![alt text](http://openclipart.org/image/20px/svg_to_png/159733/green-tick.png)| ![alt text](http://openclipart.org/image/20px/svg_to_png/159733/green-tick.png)|
 |Progress Report Created| ![alt text](http://openclipart.org/image/20px/svg_to_png/159733/green-tick.png)| ![alt text](http://openclipart.org/image/20px/svg_to_png/159733/green-tick.png)
 |Complete| ![alt text](http://openclipart.org/image/20px/svg_to_png/159733/green-tick.png)| ![alt text](http://openclipart.org/image/20px/svg_to_png/159733/green-tick.png)
