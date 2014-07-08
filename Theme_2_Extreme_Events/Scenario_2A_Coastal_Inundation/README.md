@@ -11,15 +11,18 @@ As a severe storm is approaching the U.S. East Coast which will result in inunda
 The ability to quickly and easily integrate these complementary datasets and predictions into visualizations and analyses will help emergency managers and responders improve their ability to forecast, prepare for and respond to coastal storms.
 
 ### Overview
-There is a total of 8 notebooks available for Theme 2 Scenario 2A - Coastal Inundation
+There is a total of 10 notebooks available for Theme 2 Scenario 2A - Coastal Inundation
 
 #### Inundation Notebooks
-* Extremes
+##### [Extremes](https://github.com/ioos/system-test/tree/master/Theme_2_Extreme_Events/Scenario_2A_Coastal_Inundation/Scenario_2A_Extremes_Inundation)
+
 - [X] Started
 - [X] Progress Report Created
 - [X] Complete
 - [ ] Reviewed 
-* Model/Obs
+
+##### [Model/Obs](https://github.com/ioos/system-test/tree/master/Theme_2_Extreme_Events/Scenario_2A_Coastal_Inundation/Scenario_2A_ModelDataCompare_Inundation)
+
 - [ ] Started
 - [X] Progress Report Created
 - [X] Complete
@@ -27,13 +30,16 @@ There is a total of 8 notebooks available for Theme 2 Scenario 2A - Coastal Inun
 
 
 #### Waves Notebooks
-* Extremes
+##### [Extremes](https://github.com/ioos/system-test/tree/master/Theme_2_Extreme_Events/Scenario_2A_Coastal_Inundation/Scenario_2A_Extremes_Waves)
+
 - [X] Started
 - [ ] Add model data using iris
 - [ ] Progress Report Created
 - [ ] Complete
 - [ ] Reviewed 
-* Model/Obs
+
+##### [Model/Obs](https://github.com/ioos/system-test/tree/master/Theme_2_Extreme_Events/Scenario_2A_Coastal_Inundation/Scenario_2A_ModelDataCompare_Waves)
+
 - [X] Started
 - [X] Progress Report Created
 - [X] Complete
@@ -41,12 +47,14 @@ There is a total of 8 notebooks available for Theme 2 Scenario 2A - Coastal Inun
 
 
 #### Currents Notebooks
-* Extremes
+##### Extremes
 - [X] Started
 - [ ] Progress Report Created
 - [ ] Complete
 - [ ] Reviewed 
-* Model/Obs
+
+##### Model/Obs
+
 - [X] Started
 - [ ] Progress Report Created
 - [ ] Complete
@@ -54,19 +62,21 @@ There is a total of 8 notebooks available for Theme 2 Scenario 2A - Coastal Inun
 
 
 #### Winds Notebooks
-* Extremes
+##### Extremes
 - [ ] Started
 - [ ] Progress Report Created
 - [ ] Complete
 - [ ] Reviewed 
-* Model/Obs
+
+##### Model/Obs
+
 - [ ] Started
 - [ ] Progress Report Created
 - [ ] Complete
 - [ ] Reviewed 
 
 #### Additional Notebooks
-* Use of additional data source to visualize wind data
+##### Use of additional data source to visualize wind data
 - [ ] Started
 - [ ] Progress Report Created
 - [ ] Complete
