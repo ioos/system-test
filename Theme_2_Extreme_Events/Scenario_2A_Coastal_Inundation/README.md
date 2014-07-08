@@ -13,71 +13,11 @@ The ability to quickly and easily integrate these complementary datasets and pre
 ### Overview
 There is a total of 10 notebooks available for Theme 2 Scenario 2A - Coastal Inundation
 
-#### Inundation Notebooks
-##### [Extremes](https://github.com/ioos/system-test/tree/master/Theme_2_Extreme_Events/Scenario_2A_Coastal_Inundation/Scenario_2A_Extremes_Inundation)
+#### Inundation
+| Status   | Extreme | Model/Obs  |
+|----------|---------|------------|
+| Started  | X| X|
+|Progress Report Created| X| X
+|Complete| X| X
+|Reviewed|  | X
 
-- [X] Started
-- [X] Progress Report Created
-- [X] Complete
-- [ ] Reviewed 
-
-##### [Model/Obs](https://github.com/ioos/system-test/tree/master/Theme_2_Extreme_Events/Scenario_2A_Coastal_Inundation/Scenario_2A_ModelDataCompare_Inundation)
-
-- [ ] Started
-- [X] Progress Report Created
-- [X] Complete
-- [X] Reviewed 
-
-
-#### Waves Notebooks
-##### [Extremes](https://github.com/ioos/system-test/tree/master/Theme_2_Extreme_Events/Scenario_2A_Coastal_Inundation/Scenario_2A_Extremes_Waves)
-
-- [X] Started
-- [ ] Add model data using iris
-- [ ] Progress Report Created
-- [ ] Complete
-- [ ] Reviewed 
-
-##### [Model/Obs](https://github.com/ioos/system-test/tree/master/Theme_2_Extreme_Events/Scenario_2A_Coastal_Inundation/Scenario_2A_ModelDataCompare_Waves)
-
-- [X] Started
-- [X] Progress Report Created
-- [X] Complete
-- [ ] Reviewed 
-
-
-#### Currents Notebooks
-##### Extremes
-- [X] Started
-- [ ] Progress Report Created
-- [ ] Complete
-- [ ] Reviewed 
-
-##### Model/Obs
-
-- [X] Started
-- [ ] Progress Report Created
-- [ ] Complete
-- [ ] Reviewed 
-
-
-#### Winds Notebooks
-##### Extremes
-- [ ] Started
-- [ ] Progress Report Created
-- [ ] Complete
-- [ ] Reviewed 
-
-##### Model/Obs
-
-- [ ] Started
-- [ ] Progress Report Created
-- [ ] Complete
-- [ ] Reviewed 
-
-#### Additional Notebooks
-##### Use of additional data source to visualize wind data
-- [ ] Started
-- [ ] Progress Report Created
-- [ ] Complete
-- [ ] Reviewed 
