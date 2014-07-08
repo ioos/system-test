@@ -9,3 +9,65 @@ As a severe storm is approaching the U.S. East Coast which will result in inunda
 *  After the storm, researchers want to compare observed data to modeled data to identify model shortcomings and areas of improvement, as well as to quality control observing systems.
 
 The ability to quickly and easily integrate these complementary datasets and predictions into visualizations and analyses will help emergency managers and responders improve their ability to forecast, prepare for and respond to coastal storms.
+
+### Overview
+There is a total of 8 notebooks available for Theme 2 Scenario 2A - Coastal Inundation
+
+#### Inundation Notebooks
+* Extremes
+- [X] Started
+- [X] Progress Report Created
+- [X] Complete
+- [ ] Reviewed 
+* Model/Obs
+- [ ] Started
+- [X] Progress Report Created
+- [X] Complete
+- [X] Reviewed 
+
+
+#### Waves Notebooks
+* Extremes
+- [X] Started
+- [ ] Add model data using iris
+- [ ] Progress Report Created
+- [ ] Complete
+- [ ] Reviewed 
+* Model/Obs
+- [X] Started
+- [X] Progress Report Created
+- [X] Complete
+- [ ] Reviewed 
+
+
+#### Currents Notebooks
+* Extremes
+- [X] Started
+- [ ] Progress Report Created
+- [ ] Complete
+- [ ] Reviewed 
+* Model/Obs
+- [X] Started
+- [ ] Progress Report Created
+- [ ] Complete
+- [ ] Reviewed 
+
+
+#### Winds Notebooks
+* Extremes
+- [ ] Started
+- [ ] Progress Report Created
+- [ ] Complete
+- [ ] Reviewed 
+* Model/Obs
+- [ ] Started
+- [ ] Progress Report Created
+- [ ] Complete
+- [ ] Reviewed 
+
+#### Additional Notebooks
+* Use of additional data source to visualize wind data
+- [ ] Started
+- [ ] Progress Report Created
+- [ ] Complete
+- [ ] Reviewed 
