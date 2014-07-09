@@ -1,0 +1,9 @@
+pandas
+numpy
+matplotlib
+OWSLib
+netCDF4
+geojson
+Shapely
+folium==0.1.2_dev_f7194ad
+rdflib
