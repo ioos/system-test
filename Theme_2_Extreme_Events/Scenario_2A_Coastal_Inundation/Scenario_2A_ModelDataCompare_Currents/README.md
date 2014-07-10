@@ -1,8 +1,15 @@
-# IOOS System Test - Theme 2 - Exteme Events
+## IOOS System Test - Theme 2 - Exteme Events
 
 ## Scenario 2A - Coastal Inundation
 
-### Requirements
+### Notebook - Scenario_2A_ModelDataCompare_Currents
+
+#### Progress report
+Click [here] (https://github.com/ioos/system-test/issues/113) for a detailed report of the progress made in this notebook.
+
+View the notebook in [nbviewer](http://nbviewer.ipython.org/github/ioos/system-test/blob/master/Theme_2_Extreme_Events/Scenario_2A_Coastal_Inundation/Scenario_2A_ModelDataCompare_Currents/Scenario_2A_Model_Obs_Compare_Currents.ipynb)
+
+#### Requirements
 
 1. Using `pip`
     ```bash
@@ -23,17 +30,10 @@
     conda install -n yourenvname -c https://conda.binstar.org/rsignell iris=1.7.0_dev_RPS
     ```
 
-### Helper methods
+#### Helper methods
 
 Some helper functions have been abstracted into the file called `utilities.py`
 so the IPython notebook can maintain a certain degree of readability.
-
-
-**Note:** If your HDF5 and/or NETCDF4 libraries are in uncommon locations, you
-may need to specify the paths when installing netCDF4.
-```bash
-HDF5_DIR=/your/path/to/hdf5 NETCDF4_DIR=/your/path/to/netcdf4 PIP_OR_CONDA_INSTALL_COMMAND
-```
 
 **Note:** If your `gdal-config` binary is in an uncommon location, you may need
 to specify the path when installing.
