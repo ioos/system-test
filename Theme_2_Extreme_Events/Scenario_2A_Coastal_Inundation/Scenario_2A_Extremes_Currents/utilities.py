@@ -15,6 +15,7 @@ except ImportError:
 import numpy as np
 from IPython.display import HTML
 from pandas import DataFrame, concat, read_csv
+from bs4 import BeautifulSoup
 
 # Custom IOOS/ASA modules (available at PyPI).
 from owslib import fes
@@ -57,6 +58,25 @@ def get_Coops_longName(station):
         longName = station
     return longName[0]
 
+def get_coops_sensor_name(station):
+    '''
+    Gets the sensor name from a describe sensor response,
+    used in currents requests to get point rather than profile data
+    '''
+    url = ('http://opendap.co-ops.nos.noaa.gov/ioos-dif-sos/SOS?service=SOS&'
+           'request=DescribeSensor&version=1.0.0&'
+           'outputFormat=text/xml;subtype="sensorML/1.0.1"&'
+           'procedure=urn:ioos:station:NOAA.NOS.CO-OPS:%s') % station
+    
+    r = requests.get(url)
+    soup = BeautifulSoup(r.text)
+    
+    iden = soup.findAll('sml:identification')
+    if len(iden) > 1:
+        return iden[1]['xlink:href']
+    
+    return None
+
 
 def coops2data(collector, station_id, sos_name):
     """Extract the Observation Data from the collector."""
@@ -90,14 +110,30 @@ def coops2data(collector, station_id, sos_name):
     return data
 
 
-def coops2df(collector, station_id, sos_name, iso_start, iso_end):
+def coops2df(collector, station_id, sos_name, iso_start, iso_end,use_procedure=False):
     """Request CSV response from SOS and convert to Pandas DataFrames."""
 
     long_name = get_Coops_longName(station_id)
-    url = (('http://opendap.co-ops.nos.noaa.gov/ioos-dif-sos/SOS?'
-         'service=SOS&request=GetObservation&version=1.0.0'
-         '&observedProperty=currents&offering=urn:ioos:station:NOAA.NOS.CO-OPS:%s'
-         '&responseFormat=text/csv&eventTime=%s/%s') % (str(station_id), iso_start, iso_end))
+
+    if use_procedure:
+
+        if sos_name.lower() == "currents":
+            procedure = get_coops_sensor_name(station_id)+":rtb"
+
+            url = (('http://opendap.co-ops.nos.noaa.gov/ioos-dif-sos/SOS?'
+                 'service=SOS&request=GetObservation&version=1.0.0'
+                 '&observedProperty=currents&offering=urn:ioos:station:NOAA.NOS.CO-OPS:%s'
+                 '&procedure=%s&responseFormat=text/csv&eventTime=%s/%s') % (str(station_id), procedure ,iso_start, iso_end))
+        else:
+            url = (('http://opendap.co-ops.nos.noaa.gov/ioos-dif-sos/SOS?'
+             'service=SOS&request=GetObservation&version=1.0.0'
+             '&observedProperty=currents&offering=urn:ioos:station:NOAA.NOS.CO-OPS:%s'
+             '&responseFormat=text/csv&eventTime=%s/%s') % (str(station_id), iso_start, iso_end))    
+    else:
+        url = (('http://opendap.co-ops.nos.noaa.gov/ioos-dif-sos/SOS?'
+             'service=SOS&request=GetObservation&version=1.0.0'
+             '&observedProperty=currents&offering=urn:ioos:station:NOAA.NOS.CO-OPS:%s'
+             '&responseFormat=text/csv&eventTime=%s/%s') % (str(station_id), iso_start, iso_end))
     print url
     data_df = read_csv(url, parse_dates=True, index_col='date_time')
     data_df.name = long_name
