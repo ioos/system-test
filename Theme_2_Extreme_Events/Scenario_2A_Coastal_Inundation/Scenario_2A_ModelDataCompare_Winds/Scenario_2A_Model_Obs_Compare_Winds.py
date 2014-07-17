@@ -150,14 +150,14 @@ for url in bbox_endpoints:
         csw = CatalogueServiceWeb(url, timeout=20)
         csw.getrecords2(constraints=[filters], maxrecords=1000, esn='full')
         for record, item in csw.records.items():
-            print "  -", item.title
+#             print "  -", item.title
             # Get DAP URLs
             url = next((d['url'] for d in item.references if d['scheme'] in dap_services), None)
             if url:
-                print "    + OPeNDAP URL: %s" % url
+#                 print "    + OPeNDAP URL: %s" % url
                 dap_urls.append(url)
-            else:
-                print "    + No OPeNDAP service available"
+#             else:
+#                 print "    + No OPeNDAP service available"
     except BaseException as e:
         print "  - FAILED", url
 
