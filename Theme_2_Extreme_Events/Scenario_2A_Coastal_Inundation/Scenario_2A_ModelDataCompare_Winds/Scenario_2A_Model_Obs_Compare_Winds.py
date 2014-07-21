@@ -111,7 +111,7 @@ endpoints = ['http://www.nodc.noaa.gov/geoportal/csw',
              'http://geoport.whoi.edu/gi-cat/services/cswiso']
 bbox_endpoints = []
 for url in endpoints:
-    queryables = []
+#     queryables = []
     try:
         csw = CatalogueServiceWeb(url, timeout=20)
     except BaseException:
@@ -161,21 +161,55 @@ for url in bbox_endpoints:
     except BaseException as e:
         print "  - FAILED", url
 
+# <markdowncell>
+
+# ### Check a few CSW endpoints
+
+# <codecell>
+
+for endpoint in bbox_endpoints:
+    print endpoint
+    
+    csw = CatalogueServiceWeb(endpoint,timeout=60)
+
+    # Print out ISO Queryables
+#     for oper in csw.operations:
+#         if oper.name == 'GetRecords':
+#             cnstr = oper.constraints['SupportedISOQueryables']['values']
+    #         print('\nISO Queryables:%s\n' % '\n'.join(cnstr))
+
+    # convert User Input into FES filters
+    start,stop = date_range(start_date,stop_date)
+    bbox = fes.BBox(bounding_box)
+
+    #use the search name to create search filter
+    or_filt = fes.Or([fes.PropertyIsLike(propertyname='apiso:AnyText',literal=('*%s*' % val),
+                        escapeChar='\\',wildCard='*',singleChar='?') for val in data_dict['winds']['u_names']])
+
+    filter_list = [fes.And([ bbox, start, stop, or_filt]) ]
+    # connect to CSW, explore it's properties
+    # try request using multiple filters "and" syntax: [[filter1,filter2]]
+    try:
+        csw.getrecords2(constraints=filter_list, maxrecords=1000, esn='full')
+    except Exception as e:
+        print 'ERROR - ' + str(e)
+    else:
+        print str(len(csw.records)) + " csw records found"
+        for rec, item in csw.records.items():
+            print(item.title)
+    print '\n'
+
+# <markdowncell>
+
+# ### Use NGDC CSW
+
 # <codecell>
 
 endpoint = 'http://www.ngdc.noaa.gov/geoportal/csw' # NGDC Geoportal
-# endpoint = 'http://www.nodc.noaa.gov/geoportal/csw' # NGDC Geoportal
-# endpoint = 'http://catalog.data.gov/csw-all'
 csw = CatalogueServiceWeb(endpoint,timeout=60)
-
-for oper in csw.operations:
-    if oper.name == 'GetRecords':
-        cnstr = oper.constraints['SupportedISOQueryables']['values']
-        print('\nISO Queryables:%s\n' % '\n'.join(cnstr))
 
 # convert User Input into FES filters
 start,stop = date_range(start_date,stop_date)
-
 bbox = fes.BBox(bounding_box)
 
 #use the search name to create search filter
@@ -185,10 +219,14 @@ or_filt = fes.Or([fes.PropertyIsLike(propertyname='apiso:AnyText',literal=('*%s*
 filter_list = [fes.And([ bbox, start, stop, or_filt]) ]
 # connect to CSW, explore it's properties
 # try request using multiple filters "and" syntax: [[filter1,filter2]]
-csw.getrecords2(constraints=filter_list, maxrecords=1000, esn='full')
-print str(len(csw.records)) + " csw records found"
-for rec, item in csw.records.items():
-    print(item.title)
+try:
+    csw.getrecords2(constraints=filter_list, maxrecords=1000, esn='full')
+except Exception as e:
+    print 'ERROR - ' + str(e)
+else:
+    print str(len(csw.records)) + " csw records found"
+    for rec, item in csw.records.items():
+        print(item.title)
 
 # <markdowncell>
 
@@ -312,21 +350,14 @@ for sta in stations:
 for df in obs_df:
     fig, axes = plt.subplots(1, 1, figsize=(20,6))
     
-    # Only plot the first bin
     axes = df['wind_speed (m/s)'].plot(title=df.name, legend=True, color='b')
-#     plt.setp(axes.lines[0], linewidth=1.0, zorder=1)
     axes.set_ylabel('Wind Speed (m/s)')
     for tl in axes.get_yticklabels():
         tl.set_color('b')
     axes.yaxis.label.set_color('blue')
         
-#     ax2 = axes.twinx()
     axes = df['wind_speed_of_gust (m/s)'].plot(title=df.name, legend=True, color='g')
     plt.setp(axes.lines[0], linewidth=1.0, zorder=1)
-#     axes2.set_ylabel('Wind Gust (m/s)')
-#     for tl in ax2.get_yticklabels():
-#         tl.set_color('g')
-#     axes2.yaxis.label.set_color('green')
 
 # <markdowncell>
 
@@ -464,11 +495,11 @@ for n in range(len(stations)):
     
     # Create obs station marker
     popup_string = ('<b>Station:</b><br>'+ longname)
-    m.simple_marker([olat, olon], popup=popup_string)
+    m.simple_marker([olat, olon], popup=popup_string,clustered_marker=False)
     
     # Create model grid point marker
-#     m.simple_marker([model_lat[n], model_lon[n]], popup=popup_string, marker_color='red', marker_icon='download')
     popup_string = ('<b>Model Grid Point</b>')
+#     m.simple_marker([model_lat[n], model_lon[n]], popup=popup_string, marker_color='red', marker_icon='download',clustered_marker=False)
     m.circle_marker([mlat, mlon], popup=popup_string, fill_color='#ff0000', radius=5000, line_color='#ff0000')
 
 m.line(get_coordinates(bounding_box, bounding_box_type), line_color='#FF0000', line_weight=5)
