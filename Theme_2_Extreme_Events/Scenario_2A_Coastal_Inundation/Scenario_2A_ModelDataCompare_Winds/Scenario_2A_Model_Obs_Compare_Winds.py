@@ -361,6 +361,20 @@ for df in obs_df:
 
 # <markdowncell>
 
+# ### Plot wind direction
+
+# <codecell>
+
+for df in obs_df:
+    figure()
+    # Only plot the first bin
+    ax = df['wind_from_direction (degree)'].plot(figsize=(14, 6), title=df.name, legend=False)
+    plt.setp(ax.lines[0], linewidth=1.0, zorder=1)
+    ax.legend()
+    ax.set_ylabel('Wind Direction (degree)')
+
+# <markdowncell>
+
 # ###Get model output from OPeNDAP URLS
 # Try to open all the OPeNDAP URLS using Iris from the British Met Office. If we can open in Iris, we know it's a model result.
 
@@ -519,7 +533,7 @@ for n in range(len(obs_df)):
     ax.legend()
 
     # Overlay the obs data (resample to hourly instead of 6 mins!)
-    ax = obs_df[n]['wind_speed (m/s)'].resample('H', how='mean').plot(title=df.name, legend=False, color='b')
+    ax = obs_df[n]['wind_speed (m/s)'].resample('H', how='mean').plot(title=obs_df[n].name, legend=False, color='b')
     plt.setp(ax.lines[1], linewidth=1.0, zorder=1)
     ax.legend()
     ax.set_ylabel('Wind Speed (m/s)')
