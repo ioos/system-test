@@ -1,6 +1,4 @@
-IOOS System Test - Theme 1 - Baseline
-
-==============
+# IOOS System Test - Theme 1 - Baseline
 
 The baseline assessment theme includes test cases that, as the name of theme states, assess the basic functionality of the Data Management and Communications system. While the test cases for this theme have no slant towards a particular scientific endeavor, the functionality to be tested underlies all subsequent test themes. These test cases will incorporate multiple IOOS Regions and partners, cover a large geographic scope, employ multiple types of data, and cross scientific disciplines. 
 
@@ -21,5 +19,3 @@ For example, in the context of the baseline Modeling Notebook the following asse
 *  A list of model records found within each catalog examined.
 *  A summary of models by type and geographic region which would help identify those regions with less or more model coverage and of what kind (e.g. inundation models, ecosystem models, etc.).
 *  A summary of models, geographic regions covered, and agency that has contributed the model to the catalog where available.
-
-
