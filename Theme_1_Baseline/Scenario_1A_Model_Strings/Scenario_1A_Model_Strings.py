@@ -85,15 +85,22 @@ for x in range(len(model_name_filters)):
 
 # <markdowncell>
 
+# <div class="error"><strong>Paginating CSW Records</strong> - Some servers have a maximum amount of records you can retrieve at once. See: https://github.com/ioos/system-test/issues/126</div>
+
+# <markdowncell>
+
 # #### Load results into a Pandas DataFrame
 
 # <codecell>
 
+%matplotlib inline
 import pandas as pd
+pd.set_option('display.max_columns', 20)
+pd.set_option('display.max_rows', 50)
+
 from IPython.display import HTML
 
 df = pd.DataFrame(model_results)
-df.head()
 
 # <markdowncell>
 
@@ -101,8 +108,40 @@ df.head()
 
 # <codecell>
 
-total_services = pd.DataFrame(df.groupby("scheme").size(), columns=("Total",))
-HTML(total_services.to_html())
+total_services = pd.DataFrame(df.groupby("scheme").size(), columns=("Number of services",))
+#HTML(total_services.to_html())
+total_services.sort('Number of services', ascending=False).plot(kind="barh", figsize=(10,8,))
+
+# <markdowncell>
+
+# <div class="error"><strong>Service Types</strong> - URNs for the same service type are being identified differently.  There should be a consistent way of representing each service, or a complete mapping needs to be made available. See: https://github.com/ioos/system-test/issues/57</div>
+
+# <markdowncell>
+
+# #### Attempt to normalize the services manually
+
+# <codecell>
+
+service_mapping = {
+    "odp" : "opendap"
+}
+
+def normalize_service_urn(urn):
+    urns = urn.split(':')
+    if urns[-1].lower() == "url":
+        del urns[-1]
+    if urns[-1] in service_mapping:
+        return service_mapping[urns[-1]]
+    return urns[-1].lower()
+
+from copy import copy
+normalized_urns = df.copy(deep=True)
+normalized_urns["scheme"] = normalized_urns["scheme"].map(lambda x: normalize_service_urn(x))
+
+# <codecell>
+
+normalized_urns_summary = pd.DataFrame(normalized_urns.groupby("scheme").size(), columns=("Number of services",))
+normalized_urns_summary.sort('Number of services', ascending=False).plot(kind="barh", figsize=(10,6,))
 
 # <markdowncell>
 
@@ -110,8 +149,12 @@ HTML(total_services.to_html())
 
 # <codecell>
 
-model_service_summary = pd.DataFrame(df.groupby(["model", "scheme"], sort=True).size(), columns=("Total",))
-HTML(model_service_summary.to_html())
+import math
+
+model_service_summary = pd.DataFrame(normalized_urns.groupby(["model", "scheme"], sort=True).size(), columns=("Number of services",))
+#HTML(model_service_summary.to_html())
+model_service_plotter = model_service_summary.unstack("model")
+model_service_plot = model_service_plotter.plot(kind='barh', subplots=True, figsize=(12,35,), sharey=True)
 
 # <markdowncell>
 
@@ -119,8 +162,21 @@ HTML(model_service_summary.to_html())
 
 # <codecell>
 
-records_per_csw = pd.DataFrame(df.groupby(["model", "server", "scheme"]).size(), columns=("Total",))
-HTML(records_per_csw.to_html())
+records_per_csw = pd.DataFrame(normalized_urns.groupby(["model", "server"]).size(), columns=("Number of services",))
+#HTML(records_per_csw.to_html())
+model_csw_plotter = records_per_csw.unstack("model")
+model_csw_plot = model_csw_plotter.plot(kind='barh', subplots=True, figsize=(12,20,), sharey=True)
+
+# <markdowncell>
+
+# #### Services per CSW server
+
+# <codecell>
+
+records_per_csw = pd.DataFrame(normalized_urns.groupby(["scheme", "server"]).size(), columns=("Number of services",))
+#HTML(records_per_csw.to_html())
+model_csw_plotter = records_per_csw.unstack("server")
+model_csw_plot = model_csw_plotter.plot(kind='barh', subplots=True, figsize=(12,30,), sharey=True)
 
 # <codecell>
 
