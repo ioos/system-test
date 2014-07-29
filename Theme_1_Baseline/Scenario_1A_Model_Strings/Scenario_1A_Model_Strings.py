@@ -23,7 +23,6 @@ css_styles()
 
 # https://github.com/ioos/system-test/wiki/Service-Registries-and-Data-Catalogs
 known_csw_servers = endpoints = ['http://data.nodc.noaa.gov/geoportal/csw',
-                                 'https://data.noaa.gov/csw',
                                  'http://cwic.csiss.gmu.edu/cwicv1/discovery',
                                  'http://geoport.whoi.edu/geoportal/csw',
                                  'https://edg.epa.gov/metadata/csw',
@@ -32,7 +31,13 @@ known_csw_servers = endpoints = ['http://data.nodc.noaa.gov/geoportal/csw',
                                  'http://www.nodc.noaa.gov/geoportal/csw',
                                  'http://cida.usgs.gov/gdp/geonetwork/srv/en/csw',
                                  'http://geodiscover.cgdi.ca/wes/serviceManagerCSW/csw',
-                                 'http://geoport.whoi.edu/gi-cat/services/cswiso']
+                                 'http://geoport.whoi.edu/gi-cat/services/cswiso',
+                                 #'https://data.noaa.gov/csw',
+                                 ]
+
+# <markdowncell>
+
+# <div class="error"><strong>CSW Server Broken</strong> - 'https://data.noaa.gov/csw' has been omitted because it is not working.  See: https://github.com/ioos/system-test/issues/130</div>
 
 # <codecell>
 
@@ -101,6 +106,7 @@ pd.set_option('display.max_rows', 50)
 from IPython.display import HTML
 
 df = pd.DataFrame(model_results)
+df = df.drop_duplicates()
 
 # <markdowncell>
 
@@ -122,19 +128,7 @@ total_services.sort('Number of services', ascending=False).plot(kind="barh", fig
 
 # <codecell>
 
-service_mapping = {
-    "odp" : "opendap"
-}
-
-def normalize_service_urn(urn):
-    urns = urn.split(':')
-    if urns[-1].lower() == "url":
-        del urns[-1]
-    if urns[-1] in service_mapping:
-        return service_mapping[urns[-1]]
-    return urns[-1].lower()
-
-from copy import copy
+from utilities import normalize_service_urn
 normalized_urns = df.copy(deep=True)
 normalized_urns["scheme"] = normalized_urns["scheme"].map(lambda x: normalize_service_urn(x))
 

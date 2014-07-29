@@ -16,3 +16,16 @@ def css_styles():
         }
         </style>
     """)
+
+service_mapping = {
+    "odp" : "opendap"
+}
+
+
+def normalize_service_urn(urn):
+    urns = urn.split(':')
+    if urns[-1].lower() == "url":
+        del urns[-1]
+    if urns[-1] in service_mapping:
+        return service_mapping[urns[-1]]
+    return urns[-1].lower()
