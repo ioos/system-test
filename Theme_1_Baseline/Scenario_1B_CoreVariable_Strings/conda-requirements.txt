@@ -1,0 +1,4 @@
+pandas
+OWSLib
+sparqlwrapper
+rdflib-jsonld
