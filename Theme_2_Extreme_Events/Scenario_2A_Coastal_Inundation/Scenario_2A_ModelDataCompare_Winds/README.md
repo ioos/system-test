@@ -5,7 +5,7 @@
 ### Notebook - Scenario_2A_ModelDataCompare_Winds
 
 #### Progress report
-Click [here] (https://github.com/ioos/system-test/issues/113) for a detailed report of the progress made in this notebook.
+Click [here] (https://github.com/ioos/system-test/issues/135) for a detailed report of the progress made in this notebook.
 
 View the notebook in [nbviewer](http://nbviewer.ipython.org/github/ioos/system-test/blob/master/Theme_2_Extreme_Events/Scenario_2A_Coastal_Inundation/Scenario_2A_ModelDataCompare_Winds/Scenario_2A_Model_Obs_Compare_Winds.ipynb)
 
@@ -14,7 +14,7 @@ View the notebook in [nbviewer](http://nbviewer.ipython.org/github/ioos/system-t
 1. Using `pip`
     ```bash
     pip install -r pip-requirements.txt
-    pip install git+https://github.com/wrobstory/folium.git#egg=folium
+    pip install git+https://github.com/birdage/folium.git@clustered_markers#egg=folium --upgrade
     pip install git+https://github.com/SciTools/cartopy.git@v0.10.0
     pip install git+https://github.com/SciTools/iris.git@v1.6.1
     ```
@@ -23,7 +23,7 @@ View the notebook in [nbviewer](http://nbviewer.ipython.org/github/ioos/system-t
     ```bash
     conda install --file conda-requirements.txt
     conda install -c https://conda.binstar.org/rsignell iris
-    pip install git+https://github.com/wrobstory/folium.git#egg=folium
+    pip install git+https://github.com/birdage/folium.git@clustered_markers#egg=folium --upgrade
     ```
     If you are using environments within conda, be sure to specify it
     ```bash

@@ -16,8 +16,8 @@
 # * Extract OPeNDAP data endpoints from model datasets and SOS endpoints from observational datasets
 # * Obtain observation data sets from stations within the spatial boundaries
 # * Using DAP (model) endpoints find all available models data sets that fall in the area of interest, for the specified time range, and extract a model grid cell closest to all the given station locations
-# * Plot observation stations on a map (red marker for model grid points)
-# * Plot modelled and observed time series wind data on same axes for comparison
+# * Plot observation stations on a map (red marker for model grid points) and draw a line between each station and the model grid point used for comparison
+# * Plot modeled and observed time series wind speed on same axes for comparison
 # 
 
 # <headingcell level=4>
@@ -91,14 +91,9 @@ data_dict['winds'] = {
 
 # <headingcell level=3>
 
-# Search CSW for datasets of interest
+# Check CSW for bounding box filter capabilities
 
 # <codecell>
-
-# endpoint = 'http://geo.gov.ckan.org/csw'            # data.gov
-# endpoint = 'https://data.noaa.gov/csw'              # data.noaa.gov
-# endpoint = 'http://www.nodc.noaa.gov/geoportal/csw' # nodc
-# endpoint = 'http://www.ngdc.noaa.gov/geoportal/csw' # NGDC Geoportal
 
 endpoints = ['http://www.nodc.noaa.gov/geoportal/csw',
              'http://www.ngdc.noaa.gov/geoportal/csw',
@@ -123,47 +118,13 @@ for url in endpoints:
         print "Failure - %s - BBOX Query NOT supported" % url
 
 
-# <codecell>
+# <markdowncell>
 
-# Name filters
-name_filters = []
-model_strings = ['roms', 'selfe', 'adcirc', 'ncom', 'hycom', 'fvcom', 'wrf', 'wrams']
-for model in model_strings:
-    title_filter   = fes.PropertyIsLike(propertyname='apiso:Title',   literal='*%s*' % model, wildCard='*')
-    name_filters.append(title_filter)
-    subject_filter = fes.PropertyIsLike(propertyname='apiso:Subject', literal='*%s*' % model, wildCard='*')
-    name_filters.append(subject_filter)
-# Or all of the name filters together
-name_filters = fes.Or(name_filters)
-bbox = fes.BBox(bounding_box)
-
-# Final filters
-# filters = name_filters
-filters = fes.And([bbox, name_filters])
-
-dap_urls = []
-dap_services = ["urn:x-esri:specification:ServiceType:odp:url",
-                "urn:x-esri:specification:ServiceType:OPeNDAP"]
-for url in bbox_endpoints:
-    print "*", url
-    try:
-        csw = CatalogueServiceWeb(url, timeout=20)
-        csw.getrecords2(constraints=[filters], maxrecords=1000, esn='full')
-        for record, item in csw.records.items():
-#             print "  -", item.title
-            # Get DAP URLs
-            url = next((d['url'] for d in item.references if d['scheme'] in dap_services), None)
-            if url:
-#                 print "    + OPeNDAP URL: %s" % url
-                dap_urls.append(url)
-#             else:
-#                 print "    + No OPeNDAP service available"
-    except BaseException as e:
-        print "  - FAILED", url
+# ### Check the CSW endpoints for wind data in the date range specified
 
 # <markdowncell>
 
-# ### Check a few CSW endpoints
+# <div class="warning"><strong>Data discovery is limited</strong> - Most of the CSW endpoints don't have recent wind data available.</div>
 
 # <codecell>
 
@@ -171,12 +132,6 @@ for endpoint in bbox_endpoints:
     print endpoint
     
     csw = CatalogueServiceWeb(endpoint,timeout=60)
-
-    # Print out ISO Queryables
-#     for oper in csw.operations:
-#         if oper.name == 'GetRecords':
-#             cnstr = oper.constraints['SupportedISOQueryables']['values']
-    #         print('\nISO Queryables:%s\n' % '\n'.join(cnstr))
 
     # convert User Input into FES filters
     start,stop = date_range(start_date,stop_date)
@@ -195,8 +150,11 @@ for endpoint in bbox_endpoints:
         print 'ERROR - ' + str(e)
     else:
         print str(len(csw.records)) + " csw records found"
+        
+        # Print titles
         for rec, item in csw.records.items():
             print(item.title)
+        
     print '\n'
 
 # <markdowncell>
@@ -223,17 +181,15 @@ try:
     csw.getrecords2(constraints=filter_list, maxrecords=1000, esn='full')
 except Exception as e:
     print 'ERROR - ' + str(e)
-else:
-    print str(len(csw.records)) + " csw records found"
-    for rec, item in csw.records.items():
-        print(item.title)
+    
 
 # <markdowncell>
 
-# Dap URLS
+# DAP URLS
 
 # <codecell>
 
+# Now print the DAP endpoints
 dap_urls = service_urls(csw.records)
 #remove duplicates and organize
 dap_urls = sorted(set(dap_urls))
@@ -243,11 +199,15 @@ print "\n".join(dap_urls)
 
 # SOS URLs
 
+# <markdowncell>
+
+# <div class="error"><strong>CDIP buoys shouldn't be appearing</strong> - The CDIP buoys are located in the Pacific but are coming up in the Gulf of Mexico bounding box searches. See [issue](https://github.com/ioos/system-test/issues/133).</div>
+
 # <codecell>
 
 sos_urls = service_urls(csw.records,service='sos:url')
 #Add known NDBC SOS
-sos_urls.append("http://sdf.ndbc.noaa.gov/sos/server.php")  #?request=GetCapabilities&service=SOS
+# sos_urls.append("http://sdf.ndbc.noaa.gov/sos/server.php")  #?request=GetCapabilities&service=SOS
 
 sos_urls = sorted(set(sos_urls))
 print "Total SOS:",len(sos_urls)
@@ -469,10 +429,11 @@ for url in dap_urls:
                             print 'min_var error'
                     else:
                         print 'Max dist error'
+            else:
+                print 'Grid has {0} dimensions'.format(str(len(r)))
         else:
             print 'No data in range'
-    except (ValueError, RuntimeError, CoordinateNotFoundError,
-            ConstraintMismatchError) as e:
+    except Exception as e:
         warn("\n%s\n" % e)
         pass
         
@@ -498,23 +459,24 @@ for n in range(len(stations)):
     olat = obs_lat[n]
     olon = obs_lon[n]
     
-    # Get model grid points lat/lon
-    mlat = model_lat[n]
-    mlon = model_lon[n]
-    
-    # Plot a line from obs station to corresponding model grid point
-    data_1=[olat,olon]
-    data_2=[model_lat[n],model_lon[n]]
-    m.line([data_1,data_2],line_color='#00FF00', line_weight=5)
-    
     # Create obs station marker
     popup_string = ('<b>Station:</b><br>'+ longname)
-    m.simple_marker([olat, olon], popup=popup_string,clustered_marker=False)
+    m.simple_marker([olat, olon], popup=popup_string)
     
-    # Create model grid point marker
-    popup_string = ('<b>Model Grid Point</b>')
-#     m.simple_marker([model_lat[n], model_lon[n]], popup=popup_string, marker_color='red', marker_icon='download',clustered_marker=False)
-    m.circle_marker([mlat, mlon], popup=popup_string, fill_color='#ff0000', radius=5000, line_color='#ff0000')
+    # Only plot if there is model data
+    if model_lat:
+        # Get model grid points lat/lon
+        mlat = model_lat[n]
+        mlon = model_lon[n]
+        # Plot a line from obs station to corresponding model grid point
+        data_1=[olat,olon]
+        data_2=[model_lat[n],model_lon[n]]
+        m.line([data_1,data_2],line_color='#00FF00', line_weight=5)
+
+        # Create model grid point marker
+        popup_string = ('<b>Model Grid Point</b>')
+    #     m.simple_marker([model_lat[n], model_lon[n]], popup=popup_string, marker_color='red', marker_icon='download',clustered_marker=False)
+        m.circle_marker([mlat, mlon], popup=popup_string, fill_color='#ff0000', radius=5000, line_color='#ff0000')
 
 m.line(get_coordinates(bounding_box, bounding_box_type), line_color='#FF0000', line_weight=5)
 

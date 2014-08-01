@@ -5,7 +5,7 @@ Utility functions for Scenario_A_Model_Obs_Compare_Currents.ipynb
 from lxml import etree
 from io import BytesIO
 from warnings import warn
-import requests
+from IPython.display import HTML
 try:
     from urllib.request import urlopen
 except ImportError:
@@ -13,7 +13,6 @@ except ImportError:
 
 # Scientific stack.
 import numpy as np
-from IPython.display import HTML
 from pandas import DataFrame, concat, read_csv
 
 # Custom IOOS/ASA modules (available at PyPI).
