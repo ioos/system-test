@@ -18,12 +18,13 @@
 
 # #### import required libraries
 
-# In[1]:
+# In[212]:
 
 import datetime as dt
 from warnings import warn
 
 import os
+import os.path
 
 import iris
 from iris.exceptions import CoordinateNotFoundError, ConstraintMismatchError
@@ -608,9 +609,13 @@ def set_legend(ax):
 
 # <div class="warning"><strong>Station Data Plot</strong> - Some stations might not plot due to the data</div>
 
-# In[142]:
+# In[218]:
 
 ##build current roses
+
+filelist = [ f for f in os.listdir("./images") if f.endswith(".png") ]
+for f in filelist:
+    os.remove("./images/"+f)
 
 station_min_max = {}
 for station_index in st_list.keys():
@@ -668,6 +673,10 @@ for station_index in st_list.keys():
                 ax.set_title(station_index+" stacked histogram with normed (displayed in %) results (spd in knots), All Time")
                 ax.bar(all_time_dir, all_time_spd, normed=True, opening=0.8, edgecolor='white')
                 set_legend(ax) 
+                
+                fig = matplotlib.pyplot.gcf()
+                fig.set_size_inches(5,5)
+                fig.savefig('./images/'+station_index.split(":")[-1]+'.png',dpi=100)
             except:
                 print "error when plotting",e
                 pass
@@ -679,7 +688,7 @@ for station_index in st_list.keys():
       
 
 
-# In[200]:
+# In[219]:
 
 #plot the min and max from each station
 fields = ['spd_']
@@ -709,7 +718,7 @@ for idx in range(0,len(fields)):
 
 # #### Produce Interactive Map
 
-# In[201]:
+# In[220]:
 
 station =  st_list[st_list.keys()[0]]
 map = folium.Map(location=[station["lat"], station["lon"]], zoom_start=4)
@@ -718,8 +727,11 @@ map.line(get_coordinates(bounding_box, bounding_box_type), line_color='#FF0000',
 #plot the obs station, 
 for st in st_list:     
     hasObs = st_list[st]['hasObsData']
-    if hasObs:        
-        map.simple_marker([st_list[st]["lat"], st_list[st]["lon"]], popup='Obs Location:<br>'+st,marker_color="green",marker_icon="ok")
+    if hasObs: 
+        if os.path.isfile('./images/'+st.split(":")[-1]+'.png'):
+            map.simple_marker([st_list[st]["lat"], st_list[st]["lon"]], popup='Obs Location:<br>'+st+'<br><img src="./images/'+st.split(":")[-1]+'.png" width="242" height="242">',marker_color="green",marker_icon="ok")
+        else:
+            map.simple_marker([st_list[st]["lat"], st_list[st]["lon"]], popup='Obs Location:<br>'+st,marker_color="green",marker_icon="ok")
     else:            
         map.simple_marker([st_list[st]["lat"], st_list[st]["lon"]], popup='Obs Location:<br>'+st,marker_color="red",marker_icon="remove")
 inline_map(map)        
