@@ -3,7 +3,7 @@
 
 # ># IOOS System Test: [Extreme Events Theme:](https://github.com/ioos/system-test/wiki/Development-of-Test-Themes#theme-2-extreme-events) Coastal Inundation
 
-# ### Can we compare observed and modeled wind speeds at stations located within a bounding box?
+# ### Can we obtain observed current data at stations located within a bounding box?
 # This notebook is based on IOOS System Test: Inundation
 
 # Methodology:
@@ -18,7 +18,7 @@
 
 # #### import required libraries
 
-# In[212]:
+# In[39]:
 
 import datetime as dt
 from warnings import warn
@@ -104,7 +104,7 @@ data_dict['currents'] = {"names":['currents',
 
 # CSW Search
 
-# In[203]:
+# In[4]:
 
 endpoint = 'http://www.ngdc.noaa.gov/geoportal/csw' # NGDC Geoportal
 csw = CatalogueServiceWeb(endpoint,timeout=60)
@@ -501,13 +501,17 @@ def ndbcCurrentRequest(station_id,dt_start,dt_end):
             #zero depth is the shallowist
             depth_dim = nc.variables['depth'][:]
             
-            dir_dim = nc.variables['water_dir'][0][0][0]  
-            speed_dim = nc.variables['water_spd'][0][0][0]
+            dir_dim = nc.variables['water_dir'][:]
+            speed_dim = nc.variables['water_spd'][:]
             time_dim = nc.variables['time']
             
             data_dt = []
-            data_spd = speed_dim[:]
-            data_dir = dir_dim[:]
+            
+            data_spd = []
+            data_dir = []
+            for i in range(0,len(speed_dim)):
+                data_spd.append(speed_dim[i][0][0][0])
+                data_dir.append(dir_dim[i][0][0][0])
             
             dates = num2date(time_dim[:],units=time_dim.units,calendar='gregorian')
                 
@@ -573,7 +577,7 @@ print st_list[st_list.keys()[2]]
 
 # <div class="error"><strong>Station Data Plot</strong> - There might be an issue with some of the NDBC station data...</div>
 
-# In[123]:
+# In[28]:
 
 for station_index in st_list.keys():
     df = st_list[station_index]['obsData']    
@@ -591,28 +595,25 @@ for station_index in st_list.keys():
 
 # #### Find the min and max data values
 
-# In[124]:
+# <div class="warning"><strong>Station Data Plot</strong> - Some stations might not plot due to the data</div>
 
-#A quick way to create new windrose axes...
-def new_axes(size):
-    fig = plt.figure(figsize=(size, size), dpi=80, facecolor='w', edgecolor='w')
-    rect = [0.1, 0.1, 0.8, 0.8]
-    ax = WindroseAxes(fig, rect, axisbg='w')
-    fig.add_axes(ax)
-    return ax
+# In[35]:
 
 #...and adjust the legend box
 def set_legend(ax):
     l = ax.legend()
     plt.setp(l.get_texts(), fontsize=8)
+def new_axes():
+    fig = plt.figure(figsize=(8, 8), dpi=80, facecolor='w', edgecolor='w')
+    rect = [0.1, 0.1, 0.8, 0.8]
+    ax = WindroseAxes(fig, rect, axisbg='w')
+    fig.add_axes(ax)
+    return ax      
 
 
-# <div class="warning"><strong>Station Data Plot</strong> - Some stations might not plot due to the data</div>
-
-# In[218]:
+# In[36]:
 
 ##build current roses
-
 filelist = [ f for f in os.listdir("./images") if f.endswith(".png") ]
 for f in filelist:
     os.remove("./images/"+f)
@@ -637,9 +638,11 @@ for station_index in st_list.keys():
     
             for idx in range(0,len(spd_data)):                                    
                 if spd_data[idx] > 998:                
-                    pass
+                    continue
+                elif np.isnan(spd_data[idx]):
+                    continue
                 elif dir_data[idx] == 0:  
-                    pass
+                    continue
                 else:                                    
                     dt_year = time_data[idx].year
                     dt_year = str(dt_year)
@@ -647,12 +650,18 @@ for station_index in st_list.keys():
                         all_spd_data[dt_year] = []
                         all_dir_data[dt_year] = []
                     #convert to knots
-                    all_spd_data[dt_year].append(spd_data[idx]*0.0194384449)
-                    all_dir_data[dt_year].append(dir_data[idx])                    
+                    knot_val = (spd_data[idx]*0.0194384449)                   
+                    knot_val = "%.4f" % knot_val
+                    knot_val = float(knot_val)
                     
-                    all_time_spd.append(spd_data[idx]*0.0194384449)
+                    all_spd_data[dt_year].append(knot_val)
+                    all_dir_data[dt_year].append(dir_data[idx])                    
+                                                            
+                    all_time_spd.append(knot_val)
                     all_time_dir.append(dir_data[idx])        
             
+            all_time_spd = np.array(all_time_spd,dtype=np.float)
+            all_time_dir = np.array(all_time_dir,dtype=np.float)
             
             station_min_max[station_index]= {}
             for year in all_spd_data.keys():                
@@ -668,15 +677,16 @@ for station_index in st_list.keys():
                 station_min_max[station_index][year]['dir_at_max'] = year_dir[dir_max]
           
             try:
-                #A stacked histogram with normed (displayed in percent) results                
-                ax = new_axes(5)
-                ax.set_title(station_index+" stacked histogram with normed (displayed in %) results (spd in knots), All Time")
+                #A stacked histogram with normed (displayed in percent) results                                
+                ax = new_axes()
+                ax.set_title(station_index.split(":")[-1]+" stacked histogram with normed (displayed in %)\n results (spd in knots), All Time")     
                 ax.bar(all_time_dir, all_time_spd, normed=True, opening=0.8, edgecolor='white')
                 set_legend(ax) 
                 
                 fig = matplotlib.pyplot.gcf()
-                fig.set_size_inches(5,5)
+                fig.set_size_inches(8,8)
                 fig.savefig('./images/'+station_index.split(":")[-1]+'.png',dpi=100)
+                
             except:
                 print "error when plotting",e
                 pass
@@ -684,11 +694,10 @@ for station_index in st_list.keys():
         except Exception,e:
             print "error",e
             pass
-        
       
 
 
-# In[219]:
+# In[40]:
 
 #plot the min and max from each station
 fields = ['spd_']
@@ -708,17 +717,20 @@ for idx in range(0,len(fields)):
         
         marker_size = station_min_max[st][year]['pts']/80
         marker_size+=20
-        axes.scatter(x, y_max,label=st.split(":")[-1],s=marker_size,c=numpy.random.rand(3,1),marker="o")      
+        station_label = st.split(":")[-1]
+       
+        axes.scatter(np.array(x), np.array(y_max),label=station_label,s=marker_size,c=numpy.random.rand(3,1),marker="o")      
         axes.set_xlim([2000,2015])
         axes.set_title("Yearly Max Speed Per Station, Marker Scaled Per Annual Pts (bigger = more pts per year)");
         axes.set_ylabel("speed (knots)")
         axes.set_xlabel("Year")
         plt.legend(loc='upper left');
+        
 
 
 # #### Produce Interactive Map
 
-# In[220]:
+# In[41]:
 
 station =  st_list[st_list.keys()[0]]
 map = folium.Map(location=[station["lat"], station["lon"]], zoom_start=4)
@@ -729,7 +741,7 @@ for st in st_list:
     hasObs = st_list[st]['hasObsData']
     if hasObs: 
         if os.path.isfile('./images/'+st.split(":")[-1]+'.png'):
-            map.simple_marker([st_list[st]["lat"], st_list[st]["lon"]], popup='Obs Location:<br>'+st+'<br><img src="./images/'+st.split(":")[-1]+'.png" width="242" height="242">',marker_color="green",marker_icon="ok")
+            map.simple_marker([st_list[st]["lat"], st_list[st]["lon"]], popup='Obs Location:<br>'+st+'<br><img border=120 src="./images/'+st.split(":")[-1]+'.png" width="242" height="242">',marker_color="green",marker_icon="ok")
         else:
             map.simple_marker([st_list[st]["lat"], st_list[st]["lon"]], popup='Obs Location:<br>'+st,marker_color="green",marker_icon="ok")
     else:            

@@ -21,6 +21,11 @@ from bs4 import BeautifulSoup
 from owslib import fes
 from owslib.ows import ExceptionReport
 
+from windrose import WindroseAxes
+from matplotlib import pyplot as plt
+import matplotlib.cm as cm
+from numpy import arange
+
 
 def date_range(start_date='1900-01-01', stop_date='2100-01-01',
                constraint='overlaps'):
@@ -257,4 +262,4 @@ def css_styles():
             background-color: #fcf8e3; border-color: #faebcc; border-left: 5px solid #8a6d3b; padding: 0.5em; color: #8a6d3b;
         }
         </style>
-    """)    
+    """)
