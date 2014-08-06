@@ -3,6 +3,7 @@
 ## Scenario 2A - Coastal Inundation
 
 ### Extreme Value Analysis - Waves
+This notebook tries to extract a long time series wave height data sets (10+ years) from NDBC for a return value analysis. In addition there are 2 files included, WIS_extremes.txt and WIS_stations.txt that contain the Wave Information Studies (WIS) hindcast station annual extremes data and station lat/lon data respectively.
 
 #### Requirements
 
@@ -17,12 +18,12 @@
 2. Using `conda`
     ```bash
     conda install --file conda-requirements.txt
-    conda install -c https://conda.binstar.org/rsignell iris=v1.6.2_RPS
+    conda install -c https://conda.binstar.org/rsignell iris
     ```
     If you are using environments within conda, be sure to specify it
     ```bash
     conda install -n yourenvname --file conda-requirements.txt
-    conda install -n yourenvname -c https://conda.binstar.org/rsignell iris=v1.6.2_RPS
+    conda install -n yourenvname -c https://conda.binstar.org/rsignell iris
     ```
 
 #### Helper methods
