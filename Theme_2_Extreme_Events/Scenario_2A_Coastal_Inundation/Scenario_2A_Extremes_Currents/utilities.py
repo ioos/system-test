@@ -3,8 +3,6 @@ Utility functions for Scenario_A_Extreme_Currents.ipynb
 """
 
 from lxml import etree
-from io import BytesIO
-from warnings import warn
 import requests
 try:
     from urllib.request import urlopen
@@ -19,12 +17,6 @@ from bs4 import BeautifulSoup
 
 # Custom IOOS/ASA modules (available at PyPI).
 from owslib import fes
-from owslib.ows import ExceptionReport
-
-from windrose import WindroseAxes
-from matplotlib import pyplot as plt
-import matplotlib.cm as cm
-from numpy import arange
 
 
 def date_range(start_date='1900-01-01', stop_date='2100-01-01',
@@ -63,6 +55,7 @@ def get_Coops_longName(station):
         longName = station
     return longName[0]
 
+
 def get_coops_sensor_name(station):
     '''
     Gets the sensor name from a describe sensor response,
@@ -72,14 +65,14 @@ def get_coops_sensor_name(station):
            'request=DescribeSensor&version=1.0.0&'
            'outputFormat=text/xml;subtype="sensorML/1.0.1"&'
            'procedure=urn:ioos:station:NOAA.NOS.CO-OPS:%s') % station
-    
+
     r = requests.get(url)
     soup = BeautifulSoup(r.text)
-    
+
     iden = soup.findAll('sml:identification')
     if len(iden) > 1:
         return iden[1]['xlink:href']
-    
+
     return None
 
 
@@ -103,7 +96,7 @@ def coops2data(collector, station_id, sos_name):
         print(http_request)
         d_r = requests.get(http_request, timeout=20)
 
-        key_list = d_r.json().keys()
+        key_list = list(d_r.json().keys())
         if "data" in key_list:
             data = d_r.json()['data']
             # max_value, num_samples, date_string = findMaxVal(data)
@@ -111,11 +104,12 @@ def coops2data(collector, station_id, sos_name):
             #                                    "num_samples": num_samples,
             #                                    "date_string": date_string,
             #                                    "raw": data}
-                # print("\tyear:", year_station, " MaxValue:", max_value)
+            # print("\tyear:", year_station, " MaxValue:", max_value)
     return data
 
 
-def coops2df(collector, station_id, sos_name, iso_start, iso_end,use_procedure=False):
+def coops2df(collector, station_id, sos_name, iso_start, iso_end,
+             use_procedure=False):
     """Request CSV response from SOS and convert to Pandas DataFrames."""
 
     long_name = get_Coops_longName(station_id)
@@ -126,20 +120,26 @@ def coops2df(collector, station_id, sos_name, iso_start, iso_end,use_procedure=F
             procedure = get_coops_sensor_name(station_id)+":rtb"
 
             url = (('http://opendap.co-ops.nos.noaa.gov/ioos-dif-sos/SOS?'
-                 'service=SOS&request=GetObservation&version=1.0.0'
-                 '&observedProperty=currents&offering=urn:ioos:station:NOAA.NOS.CO-OPS:%s'
-                 '&procedure=%s&responseFormat=text/csv&eventTime=%s/%s') % (str(station_id), procedure ,iso_start, iso_end))
+                    'service=SOS&request=GetObservation&version=1.0.0'
+                    '&observedProperty=currents&offering='
+                    'urn:ioos:station:NOAA.NOS.CO-OPS:%s'
+                    '&procedure=%s&responseFormat=text/csv&eventTime=%s/%s') %
+                   (str(station_id), procedure, iso_start, iso_end))
         else:
             url = (('http://opendap.co-ops.nos.noaa.gov/ioos-dif-sos/SOS?'
-             'service=SOS&request=GetObservation&version=1.0.0'
-             '&observedProperty=currents&offering=urn:ioos:station:NOAA.NOS.CO-OPS:%s'
-             '&responseFormat=text/csv&eventTime=%s/%s') % (str(station_id), iso_start, iso_end))    
+                    'service=SOS&request=GetObservation&version=1.0.0'
+                    '&observedProperty=currents&offering='
+                    'urn:ioos:station:NOAA.NOS.CO-OPS:%s'
+                    '&responseFormat=text/csv&eventTime=%s/%s') %
+                   (str(station_id), iso_start, iso_end))
     else:
         url = (('http://opendap.co-ops.nos.noaa.gov/ioos-dif-sos/SOS?'
-             'service=SOS&request=GetObservation&version=1.0.0'
-             '&observedProperty=currents&offering=urn:ioos:station:NOAA.NOS.CO-OPS:%s'
-             '&responseFormat=text/csv&eventTime=%s/%s') % (str(station_id), iso_start, iso_end))
-    print url
+                'service=SOS&request=GetObservation&version=1.0.0'
+                '&observedProperty=currents&offering='
+                'urn:ioos:station:NOAA.NOS.CO-OPS:%s'
+                '&responseFormat=text/csv&eventTime=%s/%s') %
+               (str(station_id), iso_start, iso_end))
+    print(url)
     data_df = read_csv(url, parse_dates=True, index_col='date_time')
     data_df.name = long_name
 
@@ -176,7 +176,7 @@ def service_urls(records, service='odp:url'):
     """Extract service_urls of a specific type (DAP, SOS) from records."""
     service_string = 'urn:x-esri:specification:ServiceType:' + service
     urls = []
-    for key, rec in records.iteritems():
+    for key, rec in records.items():
         # Create a generator object, and iterate through it until the match is
         # found if not found, gets the default value (here "none").
         url = next((d['url'] for d in rec.references if
@@ -246,20 +246,25 @@ def inline_map(m):
                  'border: none"></iframe>'.format(srcdoc=srcdoc))
     return embed
 
+
 def css_styles():
     return HTML("""
         <style>
         .info {
-            background-color: #fcf8e3; border-color: #faebcc; border-left: 5px solid #8a6d3b; padding: 0.5em; color: #8a6d3b;
+            background-color: #fcf8e3; border-color: #faebcc;
+                border-left: 5px solid #8a6d3b; padding: 0.5em; color: #8a6d3b;
         }
         .success {
-            background-color: #d9edf7; border-color: #bce8f1; border-left: 5px solid #31708f; padding: 0.5em; color: #31708f;
+            background-color: #d9edf7; border-color: #bce8f1;
+                border-left: 5px solid #31708f; padding: 0.5em; color: #31708f;
         }
         .error {
-            background-color: #f2dede; border-color: #ebccd1; border-left: 5px solid #a94442; padding: 0.5em; color: #a94442;
+            background-color: #f2dede; border-color: #ebccd1;
+                border-left: 5px solid #a94442; padding: 0.5em; color: #a94442;
         }
         .warning {
-            background-color: #fcf8e3; border-color: #faebcc; border-left: 5px solid #8a6d3b; padding: 0.5em; color: #8a6d3b;
+            background-color: #fcf8e3; border-color: #faebcc;
+                border-left: 5px solid #8a6d3b; padding: 0.5em; color: #8a6d3b;
         }
         </style>
     """)
