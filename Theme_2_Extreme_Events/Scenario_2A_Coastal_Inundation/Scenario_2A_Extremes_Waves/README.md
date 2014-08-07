@@ -10,7 +10,7 @@ This notebook tries to extract a long time series wave height data sets (10+ yea
 1. Using `pip`
     ```bash
     pip install -r pip-requirements.txt
-    pip install git+https://github.com/wrobstory/folium.git#egg=folium
+    pip install git+https://github.com/birdage/folium.git@clustered_markers#egg=folium --upgrade
     pip install git+https://github.com/SciTools/cartopy.git@v0.10.0
     pip install git+https://github.com/SciTools/iris.git@v1.6.1
     ```
@@ -24,6 +24,10 @@ This notebook tries to extract a long time series wave height data sets (10+ yea
     ```bash
     conda install -n yourenvname --file conda-requirements.txt
     conda install -n yourenvname -c https://conda.binstar.org/rsignell iris
+    ```
+    You will still need to pip install folium
+    ```bash
+    pip install git+https://github.com/birdage/folium.git@clustered_markers#egg=folium --upgrade
     ```
 
 #### Helper methods
