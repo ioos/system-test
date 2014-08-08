@@ -30,36 +30,25 @@
 
 # <codecell>
 
-from datetime import datetime, timedelta
-
 import os
 import os.path
-
-import netCDF4
-from netCDF4 import num2date
+from datetime import datetime, timedelta
 
 import uuid
 import folium
-from IPython.display import HTML, Javascript, display
 
 import matplotlib.pyplot as plt
 from owslib.csw import CatalogueServiceWeb
 from owslib import fes
 
 import numpy as np
-from pandas import DataFrame, read_csv
+from pandas import read_csv
 from pyoos.collectors.ndbc.ndbc_sos import NdbcSos
 from pyoos.collectors.coops.coops_sos import CoopsSos
-import requests
 
 from utilities import (date_range, service_urls, get_coordinates,
-                       inline_map, css_styles)
-
-import time as ttime
-from io import BytesIO
-
-# For plotting.
-from windrose import WindroseAxes
+                       inline_map, css_styles, processStationInfo,
+                       get_ncfiles_catalog, new_axes, set_legend)
 
 css_styles()
 
@@ -91,11 +80,12 @@ stop_date = jd_stop.strftime('%Y-%m-%d %H:00')
 
 jd_start = datetime.strptime(start_date, '%Y-%m-%d %H:%M')
 jd_stop = datetime.strptime(stop_date, '%Y-%m-%d %H:%M')
+
 print('%s to %s ' % (start_date, stop_date))
 
 # <codecell>
 
-# Put the names in a dict for ease of access .
+# Put the names in a dict for ease of access.
 data_dict = {}
 sos_name = 'Currents'
 data_dict['currents'] = {"names": ['currents',
@@ -166,7 +156,7 @@ print("\n".join(sos_urls))
 
 # <markdowncell>
 
-# #### Update SOS timedate
+# #### Update SOS time-date
 
 # <codecell>
 
@@ -182,33 +172,11 @@ iso_end = end_time.strftime('%Y-%m-%dT%H:%M:%SZ')
 
 # <markdowncell>
 
-# #### Initalize Station Data List
+# #### Initialize Station Data List
 
 # <codecell>
 
 st_list = {}
-
-# <codecell>
-
-
-def processStationInfo(obs_loc_df, st_list, source):
-    st_data = obs_loc_df['station_id']
-    lat_data = obs_loc_df['latitude (degree)']
-    lon_data = obs_loc_df['longitude (degree)']
-
-    for i in range(0, len(st_data)):
-        station_name = st_data[i]
-        if station_name in st_list:
-            pass
-        else:
-            st_list[station_name] = {}
-            st_list[station_name]["lat"] = lat_data[i]
-            st_list[station_name]["source"] = source
-            st_list[station_name]["lon"] = lon_data[i]
-            print(station_name)
-
-    print("number of stations in bbox %s" % len(st_list.keys()))
-    return(st_list)
 
 # <markdowncell>
 
@@ -221,8 +189,10 @@ coops_collector.start_time = start_time
 coops_collector.end_time = end_time
 coops_collector.variables = data_dict["currents"]["sos_name"]
 coops_collector.server.identification.title
-print("%s:%s" % (coops_collector.start_time, coops_collector.end_time))
+
 ofrs = coops_collector.server.offerings
+
+print("%s:%s" % (coops_collector.start_time, coops_collector.end_time))
 print(len(ofrs))
 
 # <markdowncell>
@@ -231,9 +201,7 @@ print(len(ofrs))
 
 # <codecell>
 
-print("Date: %s to %s" % (iso_start, iso_end))
 box_str = ','.join(str(e) for e in bounding_box)
-print("Lat/Lon Box: %s" % box_str)
 
 url = (('http://opendap.co-ops.nos.noaa.gov/ioos-dif-sos/SOS?'
         'service=SOS&request=GetObservation&version=1.0.0&'
@@ -242,8 +210,11 @@ url = (('http://opendap.co-ops.nos.noaa.gov/ioos-dif-sos/SOS?'
         'featureOfInterest=BBOX:%s&responseFormat=text/csv') %
        (sos_name, box_str))
 
-print(url)
 obs_loc_df = read_csv(url)
+
+print(url)
+print("Date: %s to %s" % (iso_start, iso_end))
+print("Lat/Lon Box: %s" % box_str)
 
 # <markdowncell>
 
@@ -296,7 +267,7 @@ obs_loc_df = read_csv(url)
 # <codecell>
 
 st_list = processStationInfo(obs_loc_df, st_list, "ndbc")
-print(st_list)
+st_list
 
 # <codecell>
 
@@ -305,45 +276,7 @@ print(st_list[st_list.keys()[0]]['lon'])
 
 # <markdowncell>
 
-# #### NDBC Data Access
-
-# <codecell>
-
-
-def ndbc2data2(collector, station_id, sos_name, iso_start, iso_end):
-    """Extract the Observation Data from the collector."""
-    collector.features = [station_id]
-    collector.variables = [sos_name]
-
-    url = (('http://sdf.ndbc.noaa.gov/sos/server.php?'
-            'request=GetObservation&service=SOS&'
-            'version=1.0.0&'
-            'offering=%s&'
-            'featureofinterest=BBOX:%s&'
-            'observedproperty=%s&'
-            'responseformat=text/csv&'
-            'eventtime=%s/%s') %
-           (station_id, box_str, sos_name, iso_start, iso_end))
-
-    print(url)
-
-    data_df = read_csv(url, parse_dates=True, index_col='date_time')
-    data_df.name = station_id
-    return data_df
-
-# <markdowncell>
-
 # #### The function only support who date time differences
-
-# <codecell>
-
-
-def isInteger(n):
-    """Return True if argument is a whole number, False if argument
-    has a fractional part."""
-    if n % 2 == 0 or (n + 1) % 2 == 0:
-        return True
-    return False
 
 # <markdowncell>
 
@@ -355,7 +288,7 @@ def isInteger(n):
 # [ioos](https://github.com/ioos/system-test/issues/101),
 # [ioos](https://github.com/ioos/system-test/issues/116)
 # and
-# [pyoos](https://github.com/ioos/pyoos/issues/35).  Unfortunatly currents
+# [pyoos](https://github.com/ioos/pyoos/issues/35).  Unfortunately currents
 # is not available via DAP
 # ([ioos](https://github.com/ioos/system-test/issues/116))</div>
 
@@ -368,223 +301,17 @@ def isInteger(n):
 # currents in json format. The api response provides in default bin, unless a
 # bin is specified (i.e bin=1)</div>
 
-# <codecell>
-
-
-def breakdownCurrentRequest(collector, station_id, max_days,
-                            sos_name, divid):
-    # responseFormat = "csv"
-
-    # Loop through the years and get the data needed.
-    st_time = (collector.start_time)
-    ed_time = (collector.end_time)
-    # Only max_days days are allowed to be requested at once
-    # end-start gives days in date time object.
-    dt_diff = ed_time - st_time
-    num_days = dt_diff.days
-    print(num_days)
-    num_requests = num_days/max_days
-    print("Num requests: %s" % num_requests)
-    # If its whole days.
-    master_df = DataFrame()
-
-    print(num_requests)
-
-    if isInteger(num_requests):
-        # Need to add one to the range.
-        for i in range(1, num_requests + 1):
-            percent_compelte = (float(i)/float(num_requests))*100
-            display(Javascript("$('div#%s').width('%i%%')" %
-                               (divid, int(percent_compelte))))
-
-            st_days = (i-1) * max_days
-            ed_days = i * max_days
-            req_st = st_time + timedelta(days=st_days)
-            req_end = st_time + timedelta(days=ed_days)
-
-            # iso_start = req_st.strftime('%Y-%m-%dT%H:%M:%SZ')
-            # iso_end = req_end.strftime('%Y-%m-%dT%H:%M:%SZ')
-
-            tides_dt_start = req_st.strftime('%Y%m%d %H:%M')
-            tides_dt_end = req_end.strftime('%Y%m%d %H:%M')
-
-            if isinstance(collector, CoopsSos):
-                # print("coops")
-                try:
-                    # CANNOT USE THIS AS ITS NOT READY.
-                    # df = coops2df(collector, station_id, sos_name,
-                    #               iso_start, iso_end, procedure)
-                    # or
-                    # df = coopsCurrentRequest2(collector, station_id,
-                    #                           req_st, req_end)
-                    df = coopsCurrentRequest(station_id,
-                                             tides_dt_start, tides_dt_end)
-                    # If the frame is not empty add it.
-                    if df is not None:
-                        master_df.append(df)
-                        # wait on the request.
-                        ttime.sleep(5)
-                except Exception as e:
-                    print("error getting data %s" % e)
-            elif isinstance(collector, NdbcSos):
-                # print("ndbc")
-                try:
-                    # df = ndbcCurrentRequest2(collector,
-                    #                          station_id, req_st, req_end)
-                    # if the frame is not empty add it
-                    if df is not None:
-                        master_df.append(df)
-                except Exception as e:
-                    print("error getting data %s" % e)
-        return master_df
-
-# <markdowncell>
-
-# <div class="warning"><strong>Pyoos</strong> -
-# Should be able to use the collector but does not work?</div>
-
-# <codecell>
-
-
-def ndbcCurrentRequest2(collector, station_id, dt_start, dt_end):
-    try:
-        # Uses date time object.
-        collector = NdbcSos()
-        collector.variables = ['currents']
-        collector.filter(start=dt_start, end=dt_start, features=[station_id])
-        response = collector.raw(responseFormat="text/csv")
-        obs_loc_df = read_csv(BytesIO(response.encode('utf-8')),
-                              parse_dates=True, index_col='date_time')
-        return obs_loc_df
-    except:
-        return None
-
 # <markdowncell>
 
 # <div class="warning"><strong>Pyoos</strong> -
 # Should be able to use the collector, but does not work?</div>
 
-# <codecell>
-
-
-def coopsCurrentRequest2(collector, station_id, dt_start, dt_end):
-    try:
-        # Uses date time object.
-        collector = CoopsSos()
-        collector.variables = ['currents']
-
-        station_name = station_id.split(":")
-        station_name = station_name[-1]
-
-        collector.filter(start=dt_start, end=dt_start,
-                         features=[station_name])
-        response = collector.raw(responseFormat="text/csv")
-        obs_loc_df = read_csv(BytesIO(response.encode('utf-8')),
-                              parse_dates=True, index_col='date_time')
-        return obs_loc_df
-    except:
-        return None
-
-# <codecell>
-
-
-def coopsCurrentRequest(station_id, tides_dt_start, tides_dt_end):
-    tides_data_options = "time_zone=gmt&application=ports_screen&format=json"
-    tides_url = "http://tidesandcurrents.noaa.gov/api/datagetter?"
-    begin_datetime = "begin_date=" + tides_dt_start
-    end_datetime = "&end_date=" + tides_dt_end
-    current_dp = "&station=" + station_id
-    full_url = (tides_url + begin_datetime + end_datetime + current_dp +
-                "&application=web_services&product=currents&units=english&" +
-                tides_data_options)
-    t0 = ttime.time()
-    r = requests.get(full_url)
-    t1 = ttime.time()
-    total = t1 - t0
-    print("Time request %s" % total)
-    try:
-        r = r.json()
-    except:
-        return None
-    if 'data' in r:
-        r = r['data']
-        data_dt = []
-        data_spd = []
-        data_dir = []
-        for row in r:
-            data_spd.append(float(row['s']))
-            data_dir.append(float(row['d']))
-            date_time_val = datetime.strptime(row['t'], '%Y-%m-%d %H:%M')
-            data_dt.append(date_time_val)
-
-        data = {}
-        data['sea_water_speed (cm/s)'] = np.array(data_spd)
-        data['direction_of_sea_water_velocity (degree)'] = np.array(data_dir)
-        time = np.array(data_dt)
-
-        df = DataFrame(data=data, index=time,
-                       columns=['sea_water_speed (cm/s)',
-                                'direction_of_sea_water_velocity (degree)'])
-        return df
-    else:
-        return None
-
 # <markdowncell>
 
 # <div class="info">
-# <strong>Use NDBC DAP endpoints to get timeseries data</strong> -
+# <strong>Use NDBC DAP endpoints to get time-series data</strong> -
 # The DAP server for currents is available for NDBC data, we use that
 # to get long time series data.</div>
-
-# <codecell>
-
-
-def ndbcCurrentRequest(station_id, dt_start, dt_end):
-
-    # year_max = {}
-
-    main_df = DataFrame()
-    for year in range(dt_start.year, (dt_end.year+1)):
-        percent_compelte = (float(year - dt_start.year) /
-                            float((dt_end.year) - dt_start.year)) * 100.
-        display(Javascript("$('div#%s').width('%i%%')" %
-                           (divid, int(percent_compelte))))
-        try:
-            station_name = station_id.split(":")[-1]
-            url = ('http://dods.ndbc.noaa.gov/thredds/dodsC/data/adcp/' +
-                   station_name + '/' + station_name + 'a' + str(year) + '.nc')
-
-            nc = netCDF4.Dataset(url, 'r')
-            # Zero depth is the shallowest.
-            # depth_dim = nc.variables['depth'][:]
-
-            dir_dim = nc.variables['water_dir'][:]
-            speed_dim = nc.variables['water_spd'][:]
-            time_dim = nc.variables['time']
-
-            # data_dt = []
-            data_spd = data_dir = []
-            for i in range(0, len(speed_dim)):
-                data_spd.append(speed_dim[i][0][0][0])
-                data_dir.append(dir_dim[i][0][0][0])
-
-            dates = num2date(time_dim[:], units=time_dim.units,
-                             calendar='gregorian')
-
-            data = {}
-            data['sea_water_speed (cm/s)'] = np.array(data_spd)
-            col = 'direction_of_sea_water_velocity (degree)'
-            data[col] = np.array(data_dir)
-            time = np.array(dates)
-            columns = ['sea_water_speed (cm/s)',
-                       'direction_of_sea_water_velocity (degree)']
-            df = DataFrame(data=data, index=time,
-                           columns=columns)
-            main_df = main_df.append(df)
-        except Exception as e:
-            print("No data for %s, %s found: %s " % (station_name, year, e))
-
-    return main_df
 
 # <markdowncell>
 
@@ -596,7 +323,7 @@ def ndbcCurrentRequest(station_id, dt_start, dt_end):
 # <markdowncell>
 
 # <div class="error"><strong>Processing long time series</strong> -
-# The CO-OPS Server responds really slow (> 30secs, for what should be
+# The CO-OPS Server responds really slow (> 30 secs, for what should be
 # a 5 sec request) to multiple requests, so getting long time series
 # data is almost impossible.</div>
 
@@ -607,31 +334,21 @@ def ndbcCurrentRequest(station_id, dt_start, dt_end):
 # <codecell>
 
 # Used to define the number of days allowable by the service.
-coops_point_max_days = 30
-ndbc_point_max_days = 30
-
+coops_point_max_days = ndbc_point_max_days = 30
 print("start & end dates: %s, %s\n" % (jd_start, jd_stop))
 
 for station_index in st_list.keys():
     # Set it so we can use it later.
     st = station_index.split(":")[-1]
-    print(station_index, st_list[station_index]['source'])
+    print('[%s]: %s' % (st_list[station_index]['source'], station_index))
     divid = str(uuid.uuid4())
-    pb = HTML("""
-    <div style="border: 1px solid black; width:500px">
-      <div id="%s" style="background-color:blue; width:0%%">&nbsp;</div>
-    </div>""" % divid)
-    display(pb)
 
     if st_list[station_index]['source'] == 'coops':
         # Coops fails for large requests.
         master_df = []
-        # master_df = breakdownCurrentRequest(coops_collector, st,
-        #                                     coops_point_max_days,
-        #                                     sos_name, divid)
     elif st_list[station_index]['source'] == 'ndbc':
         # Use the dap catalog to get the data.
-        master_df = ndbcCurrentRequest(station_index, jd_start, jd_stop)
+        master_df = get_ncfiles_catalog(station_index, jd_start, jd_stop)
     if len(master_df) > 0:
         st_list[station_index]['hasObsData'] = True
     st_list[station_index]['obsData'] = master_df
@@ -639,7 +356,7 @@ for station_index in st_list.keys():
 # <codecell>
 
 # Check theres data in there.
-print(st_list[st_list.keys()[2]])
+st_list[st_list.keys()[2]]
 
 # <markdowncell>
 
@@ -673,23 +390,6 @@ for station_index in st_list.keys():
 
 # <div class="warning"><strong>Station Data Plot</strong> -
 # Some stations might not plot due to the data.</div>
-
-# <codecell>
-
-# ...and adjust the legend box.
-
-
-def set_legend(ax):
-    l = ax.legend()
-    plt.setp(l.get_texts(), fontsize=8)
-
-
-def new_axes():
-    fig = plt.figure(figsize=(8, 8), dpi=80, facecolor='w', edgecolor='w')
-    rect = [0.1, 0.1, 0.8, 0.8]
-    ax = WindroseAxes(fig, rect, axisbg='w')
-    fig.add_axes(ax)
-    return ax
 
 # <codecell>
 
@@ -775,7 +475,7 @@ for station_index in st_list.keys():
                 print("Error when plotting %s" % e)
                 pass
 
-        except Exception as e:  # Be specifc here!
+        except Exception as e:  # Be specific here!
             print("Error: %s" % e)
             pass
 
