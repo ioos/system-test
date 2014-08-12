@@ -46,7 +46,7 @@ from pyoos.collectors.ndbc.ndbc_sos import NdbcSos
 from pyoos.collectors.coops.coops_sos import CoopsSos
 import requests
 
-from utilities import (date_range, coops2df, coops2data, find_timevar, find_ij, nearxy, service_urls, mod_df, 
+from utilities import (fes_date_filter, coops2df, coops2data, find_timevar, find_ij, nearxy, service_urls, mod_df, 
                        get_coordinates, get_Coops_longName, inline_map, get_coops_sensor_name,css_styles)
 
 import cStringIO
@@ -115,7 +115,7 @@ csw = CatalogueServiceWeb(endpoint,timeout=60)
 # In[5]:
 
 # convert User Input into FES filters
-start,stop = date_range(start_date,stop_date)
+start,stop = fes_date_filter(start_date,stop_date)
 bbox = fes.BBox(bounding_box)
 
 #use the search name to create search filter

@@ -38,7 +38,7 @@ import parser
 from lxml import etree       #TODO suggest using bs4 instead for ease of access to XML objects
 
 #generated for csw interface
-#from date_range_formatter import dateRange  #date formatter (R.Signell)
+#from fes_date_filter_formatter import fes_date_filter  #date formatter (R.Signell)
 import requests              #required for the processing of requests
 from utilities import * 
 
@@ -84,7 +84,7 @@ data_dict["waves"] = {"names":['sea_surface_wave_significant_height','significan
 
 # <codecell>
 
-def dateRange(start_date='1900-01-01',stop_date='2100-01-01',constraint='overlaps'):
+def fes_date_filter(start_date='1900-01-01',stop_date='2100-01-01',constraint='overlaps'):
     if constraint == 'overlaps':
         start = fes.PropertyIsLessThanOrEqualTo(propertyname='apiso:TempExtent_begin', literal=stop_date)
         stop = fes.PropertyIsGreaterThanOrEqualTo(propertyname='apiso:TempExtent_end', literal=start_date)
@@ -96,7 +96,7 @@ def dateRange(start_date='1900-01-01',stop_date='2100-01-01',constraint='overlap
 # <codecell>
 
 # convert User Input into FES filters
-start,stop = dateRange(start_date,end_date)
+start,stop = fes_date_filter(start_date,end_date)
 box = []
 box.append(bounding_box[0][0])
 box.append(bounding_box[0][1])
