@@ -46,7 +46,7 @@ import prettyplotlib as ppl
 from pyoos.collectors.coops.coops_sos import CoopsSos
 import scipy.stats as stats
 
-from utilities import (get_Coops_longName, dateRange, get_coordinates, service_urls, inline_map, coops2data, find_timevar, 
+from utilities import (get_Coops_longName, fes_date_filter, get_coordinates, service_urls, inline_map, coops2data, find_timevar, 
                         find_ij, nearxy, mod_df)
  
 
@@ -117,7 +117,7 @@ data_dict["water"] = {"names": name_list,
 
 # <codecell>
 
-start, stop = dateRange(start_date, end_date)
+start, stop = fes_date_filter(start_date, end_date)
 box = []
 box.append(bounding_box[0][0])
 box.append(bounding_box[0][1])
@@ -409,7 +409,7 @@ constraint = iris.Constraint(cube_func=name_in_list)
 # <codecell>
 
 # Create time index for model DataFrame
-ts_rng = pd.date_range(start=jd_start, end=jd_stop, freq='6Min')
+ts_rng = pd.fes_date_filter(start=jd_start, end=jd_stop, freq='6Min')
 ts = pd.DataFrame(index=ts_rng)
 
 #Get the station lat/lon into lists and create list of model DataFrames for each station
