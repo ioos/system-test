@@ -46,7 +46,7 @@ import prettyplotlib as ppl
 from pyoos.collectors.coops.coops_sos import CoopsSos
 import scipy.stats as stats
 
-from utilities import (get_Coops_longName, dateRange, get_coordinates, service_urls, inline_map, coops2data, find_timevar, 
+from utilities import (get_Coops_longName, fes_date_filter, get_coordinates, service_urls, inline_map, coops2data, find_timevar, 
                         find_ij, nearxy, mod_df)
  
 
@@ -117,7 +117,7 @@ data_dict["water"] = {"names": name_list,
 
 # <codecell>
 
-start, stop = dateRange(start_date, end_date)
+start, stop = fes_date_filter(start_date, end_date)
 box = []
 box.append(bounding_box[0][0])
 box.append(bounding_box[0][1])

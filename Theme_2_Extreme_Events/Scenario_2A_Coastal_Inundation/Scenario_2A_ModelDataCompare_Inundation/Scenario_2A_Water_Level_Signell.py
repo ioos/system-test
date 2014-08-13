@@ -37,7 +37,7 @@ import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
 from matplotlib.transforms import offset_copy
 from cartopy.io.img_tiles import MapQuestOpenAerial
-from pandas import DataFrame, date_range, read_csv, concat
+from pandas import DataFrame, fes_date_filter, read_csv, concat
 
 from iris.exceptions import CoordinateNotFoundError, ConstraintMismatchError
 
@@ -48,7 +48,7 @@ from pyoos.collectors.coops.coops_sos import CoopsSos
 
 # Local imports
 from utilities import name_list, sos_name
-from utilities import (dateRange, coops2df, find_timevar, find_ij, nearxy,
+from utilities import (fes_date_filter, coops2df, find_timevar, find_ij, nearxy,
                        service_urls, mod_df)
 
 # <markdowncell>
@@ -140,7 +140,7 @@ for oper in csw.operations:
 
 # <codecell>
 
-start, stop = dateRange(start_date, stop_date)
+start, stop = fes_date_filter(start_date, stop_date)
 bbox = fes.BBox(box)
 
 # <codecell>
@@ -266,7 +266,7 @@ print(stations)
 
 # <codecell>
 
-ts_rng = date_range(start=jd_start, end=jd_stop, freq='6Min')
+ts_rng = fes_date_filter(start=jd_start, end=jd_stop, freq='6Min')
 ts = DataFrame(index=ts_rng)
 print(jd_start, jd_stop)
 print(len(ts))

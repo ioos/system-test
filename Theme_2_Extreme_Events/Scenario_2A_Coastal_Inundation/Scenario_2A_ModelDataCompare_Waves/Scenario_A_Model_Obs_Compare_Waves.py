@@ -40,7 +40,7 @@ import pandas as pd
 from pyoos.collectors.ndbc.ndbc_sos import NdbcSos
 import requests
 
-from utilities import date_range, coops2df, find_timevar, find_ij, nearxy, service_urls, mod_df, get_coordinates
+from utilities import fes_date_filter, coops2df, find_timevar, find_ij, nearxy, service_urls, mod_df, get_coordinates
 
 # <headingcell level=4>
 
@@ -91,7 +91,7 @@ for oper in csw.operations:
 # <codecell>
 
 # convert User Input into FES filters
-start,stop = date_range(start_date,end_date)
+start,stop = fes_date_filter(start_date,end_date)
 box = []
 box.append(bounding_box[0][0])
 box.append(bounding_box[0][1])
