@@ -1,14 +1,11 @@
 """
-Constants and definitions.
-Now we need to specify all the names we know for water level, names that
-will get used in the CSW search, and also to find data in the datasets that
-are returned.  This is ugly and fragile.  There hopefully will be a better
-way in the future...
-Standard Library.
+Utility functions for Scenario_2A_Waves.ipynb
 """
 
 from lxml import etree
 from io import BytesIO
+import datetime as dt
+import calendar # used to get number of days in a month and year
 from warnings import warn
 try:
     from urllib.request import urlopen
@@ -18,26 +15,14 @@ except ImportError:
 # Scientific stack.
 import numpy as np
 from IPython.display import HTML
-from pandas import DataFrame, concat, read_csv
-
+import pandas as pd
 # Custom IOOS/ASA modules (available at PyPI).
 from owslib import fes
 from owslib.ows import ExceptionReport
 
 
-name_list = ['water level',
-             'sea_surface_height',
-             'sea_surface_elevation',
-             'sea_surface_height_above_geoid',
-             'sea_surface_height_above_sea_level',
-             'water_surface_height_above_reference_datum',
-             'sea_surface_height_above_reference_ellipsoid']
-
-sos_name = 'water_surface_height_above_reference_datum'
-
-
-def dateRange(start_date='1900-01-01', stop_date='2100-01-01',
-              constraint='overlaps'):
+def fes_date_filter(start_date='1900-01-01', stop_date='2100-01-01',
+                    constraint='overlaps'):
     """Hopefully something like this will be implemented in fes soon."""
     if constraint == 'overlaps':
         propertyname = 'apiso:TempExtent_begin'
@@ -56,45 +41,74 @@ def dateRange(start_date='1900-01-01', stop_date='2100-01-01',
     return start, stop
 
 
-def get_Coops_longName(station):
-    """Get longName for specific station from COOPS SOS using DescribeSensor
+def get_station_longName(station):
+    """Get longName for specific station using DescribeSensor
     request."""
-    url = ('http://opendap.co-ops.nos.noaa.gov/ioos-dif-sos/SOS?service=SOS&'
-           'request=DescribeSensor&version=1.0.0&'
-           'outputFormat=text/xml;subtype="sensorML/1.0.1"&'
-           'procedure=urn:ioos:station:NOAA.NOS.CO-OPS:%s') % station
+
+    url = ('http://sdf.ndbc.noaa.gov/sos/server.php?service=SOS&'
+           'request=DescribeSensor&version=1.0.0&outputFormat=text/xml;subtype="sensorML/1.0.1"&'
+           'procedure=urn:ioos:station:wmo:%s') % station
     tree = etree.parse(urlopen(url))
     root = tree.getroot()
-    path = "//sml:identifier[@name='longName']/sml:Term/sml:value/text()"
-    namespaces = dict(sml="http://www.opengis.net/sensorML/1.0.1")
-    longName = root.xpath(path, namespaces=namespaces)
+    namespaces = {'sml': "http://www.opengis.net/sensorML/1.0.1"}
+    longName = root.xpath("//sml:identifier[@name='longName']/sml:Term/sml:value/text()", namespaces=namespaces)
     if len(longName) == 0:
         longName = station
-    return longName[0]
+        return longName
+    else:
+        return longName[0]
 
 
-def coops2df(collector, coops_id, sos_name):
-    """Request CSV response from SOS and convert to Pandas DataFrames."""
-    collector.features = [coops_id]
+def get_station_data(collector, station_id, sos_name, field_of_interest):
+    """
+    This function breaks up the SOS requests into one month chunks and
+    returns all of the data in a Pandas DataFrame
+    """
+
+    collector.features = [station_id]
     collector.variables = [sos_name]
-    long_name = get_Coops_longName(coops_id)
+    #loop through the years and get the data needed
+    st_yr = int(collector.start_time.year)
+    ed_yr = int(collector.end_time.year+1)
 
-    try:
-        response = collector.raw(responseFormat="text/csv")
-        data_df = read_csv(BytesIO(response.encode('utf-8')),
-                           parse_dates=True,
-                           index_col='date_time')
-        col = 'water_surface_height_above_reference_datum (m)'
-        if False:
-            data_df['Observed Data'] = (data_df[col] -
-                                        data_df['vertical_position (m)'])
-        data_df['Observed Data'] = data_df[col]
-    except ExceptionReport as e:
-        warn("Station %s is not NAVD datum. %s" % (long_name, e))
-        data_df = DataFrame()  # Assing an empty DataFrame for now.
+    yearly_df = []
+    # Only 31 days are allowed to be requested at once
+    for year_station in range(st_yr, ed_yr):
+        print 'Processing ' + str(year_station) + ' now...'
+        obs_df = pd.DataFrame()
+        for month in range(1, 13):
+            num_days = calendar.monthrange(year_station, month)[1]
 
-    data_df.name = long_name
-    return data_df
+            st = dt.datetime(year_station, month, 1, 0, 0, 0)
+            ed = dt.datetime(year_station, month, num_days, 23, 59, 59)
+
+            start_time1 = dt.datetime.strptime(str(st), '%Y-%m-%d %H:%M:%S')
+            end_time1 = dt.datetime.strptime(str(ed), '%Y-%m-%d %H:%M:%S')
+
+            collector.start_time = start_time1
+            collector.end_time = end_time1
+
+            try:
+                response = collector.raw(responseFormat="text/csv")
+                #get the response then get the data
+                data_df = pd.read_csv(BytesIO(response.encode('utf-8')),
+                                      parse_dates=True,
+                                      index_col='date_time')
+                # Eliminate any data with NaN.
+                # data_df['date_time'] = data_df.Time.map(lambda x: pd.datetools.parse(x).time())
+                # data_df = data_df[np.isfinite(data_df[field_of_interest])]
+                if obs_df.empty:
+                    obs_df = data_df[field_of_interest]
+                else:
+                    obs_df = pd.concat([obs_df, data_df[field_of_interest]])
+            except Exception as e:
+                print str(e)
+        if not obs_df.empty:
+            yearly_df.append(obs_df)
+        else:
+            print '\t No Data'
+
+    return yearly_df
 
 
 def mod_df(arr, timevar, istart, istop, mod_name, ts):
@@ -114,12 +128,12 @@ def mod_df(arr, timevar, istart, istop, mod_name, ts):
     arr = arr[ind+1]
     jd = jd[ind+1]
 
-    b = DataFrame(arr, index=jd, columns=[mod_name])
+    b = pd.DataFrame(arr, index=jd, columns=[mod_name])
     # Eliminate any data with NaN.
     b = b[np.isfinite(b[mod_name])]
     # Interpolate onto uniform time base, fill gaps up to:
     # (10 values @ 6 min = 1 hour).
-    c = concat([b, ts], axis=1).interpolate(limit=10)
+    c = pd.concat([b, ts], axis=1).interpolate(limit=10)
     return c
 
 
@@ -175,16 +189,16 @@ def ind2ij(a, index):
     return i, j
 
 
-def get_coordinates(bounding_box, bounding_box_type):
+def get_coordinates(bounding_box, bounding_box_type=''):
     """Create bounding box coordinates for the map."""
     coordinates = []
-    if bounding_box_type is "box":
-        coordinates.append([bounding_box[0][1], bounding_box[0][0]])
-        coordinates.append([bounding_box[0][1], bounding_box[1][0]])
-        coordinates.append([bounding_box[1][1], bounding_box[1][0]])
-        coordinates.append([bounding_box[1][1], bounding_box[0][0]])
-        coordinates.append([bounding_box[0][1], bounding_box[0][0]])
-        return coordinates
+    if bounding_box_type == "box":
+        coordinates.append([bounding_box[1], bounding_box[0]])
+        coordinates.append([bounding_box[1], bounding_box[2]])
+        coordinates.append([bounding_box[3], bounding_box[2]])
+        coordinates.append([bounding_box[3], bounding_box[0]])
+        coordinates.append([bounding_box[1], bounding_box[0]])
+    return coordinates
 
 
 def inline_map(m):
@@ -196,3 +210,22 @@ def inline_map(m):
                  'style="width: 100%; height: 500px; '
                  'border: none"></iframe>'.format(srcdoc=srcdoc))
     return embed
+
+
+def css_styles():
+    return HTML("""
+        <style>
+        .info {
+            background-color: #fcf8e3; border-color: #faebcc; border-left: 5px solid #8a6d3b; padding: 0.5em; color: #8a6d3b;
+        }
+        .success {
+            background-color: #d9edf7; border-color: #bce8f1; border-left: 5px solid #31708f; padding: 0.5em; color: #31708f;
+        }
+        .error {
+            background-color: #f2dede; border-color: #ebccd1; border-left: 5px solid #a94442; padding: 0.5em; color: #a94442;
+        }
+        .warning {
+            background-color: #fcf8e3; border-color: #faebcc; border-left: 5px solid #8a6d3b; padding: 0.5em; color: #8a6d3b;
+        }
+        </style>
+    """)
