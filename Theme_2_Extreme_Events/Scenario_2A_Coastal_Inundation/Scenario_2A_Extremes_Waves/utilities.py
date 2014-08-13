@@ -21,8 +21,8 @@ from owslib import fes
 from owslib.ows import ExceptionReport
 
 
-def date_range(start_date='1900-01-01', stop_date='2100-01-01',
-               constraint='overlaps'):
+def fes_date_filter(start_date='1900-01-01', stop_date='2100-01-01',
+                    constraint='overlaps'):
     """Hopefully something like this will be implemented in fes soon."""
     if constraint == 'overlaps':
         propertyname = 'apiso:TempExtent_begin'

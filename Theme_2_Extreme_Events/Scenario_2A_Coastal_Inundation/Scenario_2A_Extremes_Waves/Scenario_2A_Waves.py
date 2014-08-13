@@ -23,9 +23,9 @@
 # * Extract the annual maximum wave heights from the nearest WIS hindcast location (Over 20 Years!)
 # * Perform return period analysis on the long time series WIS hindcast
 
-# <headingcell level=4>
+# <markdowncell>
 
-# import required libraries
+# ### import required libraries
 
 # <codecell>
 
@@ -35,6 +35,7 @@ from io import BytesIO
 import sys
 import csv
 import json
+import time
 from scipy.stats import genextreme
 import scipy.stats as ss
 import numpy as np
@@ -45,7 +46,7 @@ from IPython.display import HTML
 import folium #required for leaflet mapping
 import random
 import netCDF4
-from netCDF4 import num2date, date2num
+from netCDF4 import num2date
 import pandas as pd
 import datetime as dt
 from pyoos.collectors.ndbc.ndbc_sos import NdbcSos
@@ -54,13 +55,13 @@ from collections import OrderedDict
 #generated for csw interface
 #from date_range_formatter import dateRange  #date formatter (R.Signell)
 import requests              #required for the processing of requests
-from utilities import (date_range, get_station_data, find_timevar, find_ij, nearxy, service_urls, mod_df, 
+from utilities import (fes_date_filter, get_station_data, find_timevar, find_ij, nearxy, service_urls, mod_df, 
                        get_coordinates, inline_map, get_station_longName, css_styles)
 css_styles()
 
 # <markdowncell>
 
-# #### Define temporal and spatial bounds of interest
+# ### Define temporal and spatial bounds of interest
 
 # <codecell>
 
@@ -88,7 +89,7 @@ print start_date,'to',end_date
 
 # <markdowncell>
 
-# #### Define standard names of variable of interest to search for in data sets
+# ### Define standard names of variable of interest to search for in data sets
 
 # <codecell>
 
@@ -105,7 +106,7 @@ data_dict["waves"] = {"names":['sea_surface_wave_significant_height',
 
 # <markdowncell>
 
-# #### Search for available service endpoints in the NGDC CSW catalog meeting search criteria
+# ### Search for available service endpoints in the NGDC CSW catalog meeting search criteria
 
 # <codecell>
 
@@ -113,11 +114,11 @@ endpoint = 'http://www.ngdc.noaa.gov/geoportal/csw' # NGDC Geoportal
 csw = CatalogueServiceWeb(endpoint,timeout=60)
 
 # convert User Input into FES filters
-start,stop = date_range(start_date, end_date)
+start,stop = fes_date_filter(start_date, end_date)
 bbox = fes.BBox(bounding_box)
 
 #use the search name to create search filter
-or_filt = fes.Or([fes.PropertyIsLike(propertyname='apiso:AnyText',literal=('*%s*' % val),
+or_filt = fes.Or([fes.PropertyIsLike(propertyname='apiso:AnyText',literal='*%s*' % val,
                     escapeChar='\\',wildCard='*',singleChar='?') for val in data_dict['waves']['names']])
 
 filter_list = [fes.And([ bbox, start, stop, or_filt]) ]
@@ -196,15 +197,13 @@ obs_loc_df.head()
 # <codecell>
 
 stations = [sta.split(':')[-1] for sta in obs_loc_df['station_id']]
-stations = sorted(set(stations))
-print stations
 obs_lon = [sta for sta in obs_loc_df['longitude (degree)']]
 obs_lat = [sta for sta in obs_loc_df['latitude (degree)']]
 
 # <markdowncell>
 
-# #### Obtain long term observation data sets from a station within bounding box (10+ years)
-# #### For simplicity let's pick a station and get all the data!
+# ## Obtain long term observation data sets from a station within bounding box (10+ years)
+# ### For simplicity let's pick a station and get all the data
 
 # <markdowncell>
 
@@ -213,6 +212,10 @@ obs_lat = [sta for sta in obs_loc_df['latitude (degree)']]
 # <codecell>
 
 # Let's pick one station for simplicity - Virginia Beach (44014)
+
+# Time cell execution
+tic = time.time()
+
 station = ['44014']
 station_id = station[0]
 
@@ -228,9 +231,20 @@ field_of_interest = "sea_surface_wave_significant_height (m)"
 # Get all of the data into a list of yearly dataframes
 yearly_df = get_station_data(collector, station_id, sos_name, field_of_interest)
 
+toc = time.time()
+sos_elapsed = toc-tic
+
+# <codecell>
+
+print 'Execution time through SOS - %0.2f mins' % (sos_elapsed/60)
+
 # <markdowncell>
 
-# #### Get the data directly from the DAP endpoint
+# <div class="error"><strong>SOS server is REALLY slow and sometimes times out! </strong> Let's just go straight to the DAP endpoint instead. It's faster and has all of the data</div>
+
+# <markdowncell>
+
+# ### Get the data directly from the DAP endpoint
 
 # <markdowncell>
 
@@ -238,29 +252,34 @@ yearly_df = get_station_data(collector, station_id, sos_name, field_of_interest)
 
 # <codecell>
 
+tic = time.time()
 years = range(1990,2013)
 yearly_df = []
 for year in years:
     # Build URL
     url = 'http://dods.ndbc.noaa.gov/thredds/dodsC/data/stdmet/{0}/{1}h{2}.nc'.format(station_id, station_id, year)
     nc = netCDF4.Dataset(url, 'r')
-    time = nc.variables['time']
+    nc_time = nc.variables['time']
     hs = nc.variables['wave_height']
     hs_data = np.array(nc.variables['wave_height'][:,0,0])
     # Replace fill values with NaN
     hs_data[hs_data==hs._FillValue] = numpy.nan
     
-    dates = num2date(time[:],units=time.units,calendar='gregorian')
-    time = np.array(dates)
+    dates = num2date(nc_time[:],units=nc_time.units,calendar='gregorian')
+    timestamp = np.array(dates)
 
     data = {}
     data['Wave Height (m)'] = hs_data
-    df = pd.DataFrame(data, index=time)
+    df = pd.DataFrame(data, index=timestamp)
     yearly_df.append(df)
+
+toc = time.time()
+dap_elapsed = toc-tic
+print 'Execution time through DAP - %0.2f mins' % (dap_elapsed/60)
 
 # <markdowncell>
 
-# #### Get the observed annual maximums into a dictionary
+# ### Get the observed annual maximums into a dictionary
 
 # <codecell>
 
@@ -271,11 +290,152 @@ for df in yearly_df:
 
 # <markdowncell>
 
-# ### Now get some modeled wave data for an event to estimate it's characteristic return period
+# ## Get WIS Hindcast data
 
 # <markdowncell>
 
-# #### Define a new temporal range to search for a particular event (Hurricane Sandy) and get available DAP endpoints
+# ### All of the [WIS](http://wis.usace.army.mil/) stations annual maximum data was downloaded and saved to a json file (WIS_extremes.txt)
+
+# <markdowncell>
+
+# The Wave Information Studies (WIS) is a US Army Corps of Engineers (USACE)   sponsored project that generates consistent, hourly, long-term (20+ years) wave climatologies along all US coastlines, including the Great Lakes and US island territories.  The WIS program originated in the Great Lakes in the mid 1970’s and migrated to the Atlantic, Gulf of Mexico and Pacific Oceans. 
+
+# <markdowncell>
+
+# #### Get the closest WIS station and extract all of the annual max wave height data as another source of long term wave heights to compare
+
+# <codecell>
+
+with open("./WIS_stations.txt") as json_file:
+    location_data = json.load(json_file)
+    
+wis_lats = []
+wis_lons = []
+wis_stations = []
+for station in location_data:
+    wis_lats.append(location_data[station]['lat'])
+    wis_lons.append(location_data[station]['lon'])
+    wis_stations.append(station)
+    
+# Get index of closest WIS station to obs station
+ind, dd = nearxy(wis_lons, wis_lats, station_lon, station_lat)
+
+# Now get read the wis data
+with open("./WIS_extremes.txt") as extremes_file:
+    wis_extremes = json.load(extremes_file)
+
+# Get the extremes from the closest station
+wis_station_id = wis_stations[ind]
+wis_lat = wis_lats[ind]
+wis_lon = wis_lons[ind]
+
+wis_maximums = []
+for year in wis_extremes[wis_station_id].keys():
+    wis_maximums.append(wis_extremes[wis_station_id][year]['height_max'])
+
+# <markdowncell>
+
+# ## Extreme Value Analysis: Perform on both the observed and WIS hindcast data
+
+# <codecell>
+
+annual_max = list(annual_max_dict.values()) 
+
+# <markdowncell>
+
+# ### Fit observation data to GEV distribution
+
+# <codecell>
+
+def gev_pdf(x):
+    return genextreme.pdf(x, xi, loc=mu, scale=sigma)
+
+# <codecell>
+
+mle = genextreme.fit(sorted(annual_max), 0)
+mu = mle[1]
+sigma = mle[2]
+xi = mle[0]
+print "The mean, sigma, and shape parameters are %s, %s, and %s, resp." % (mu, sigma, xi)
+
+# <markdowncell>
+
+# ### Probability Density Plot
+
+# <codecell>
+
+min_x = min(annual_max)-0.5
+max_x = max(annual_max)+0.5
+x = np.linspace(min_x, max_x, num=100)
+y = [gev_pdf(z) for z in x]
+
+fig = plt.figure(figsize=(12,6))
+axes = fig.add_axes([0.1, 0.1, 0.8, 0.8])
+station_longName = get_station_longName(station_id)
+xlabel = (station_longName + " - Annual max Wave Height (m)")
+axes.set_title("Probability Density & Normalized Histogram")
+axes.set_xlabel(xlabel)
+axes.plot(x, y, color='Red')
+axes.hist(annual_max, bins=arange(min_x, max_x, abs((max_x-min_x)/10)), normed=1, color='Yellow')
+
+# <markdowncell>
+
+# ### Fit WIS data to GEV distribution
+
+# <codecell>
+
+mle_wis = genextreme.fit(sorted(wis_maximums), 0)
+mu_wis = mle_wis[1]
+sigma_wis = mle_wis[2]
+xi_wis = mle_wis[0]
+print "The mean, sigma, and shape parameters are %s, %s, and %s, resp." % (mu_wis, sigma_wis, xi_wis)
+
+# <markdowncell>
+
+# ### Return Value Plot
+
+# <codecell>
+
+fig, axes = plt.subplots(2, 1, figsize=(20,12))
+# fig = plt.figure()
+# axes = fig.add_axes([0.1, 0.1, 0.8, 0.8])
+T=np.r_[1:500]
+sT = genextreme.isf(1./T, 0, mu, sigma)
+axes[0].semilogx(T, sT, 'r'), hold
+N=np.r_[1:len(annual_max)+1]; 
+Nmax=max(N);
+axes[0].plot(Nmax/N, sorted(annual_max)[::-1], 'bo')
+title = station_longName
+axes[0].set_title(title)
+axes[0].set_xlabel('Return Period (yrs)')
+axes[0].set_ylabel('Significant Wave Height (m)') 
+axes[0].grid(True)
+
+sT_wis = genextreme.isf(1./T, 0, mu_wis, sigma_wis)
+axes[1].semilogx(T, sT_wis, 'r'), hold
+N=np.r_[1:len(wis_maximums)+1]; 
+Nmax=max(N);
+axes[1].plot(Nmax/N, sorted(wis_maximums)[::-1], 'bo')
+title = 'WIS ' + wis_station_id
+axes[1].set_title(title)
+axes[1].set_xlabel('Return Period (yrs)')
+axes[1].set_ylabel('Significant Wave Height (m)') 
+axes[1].grid(True)
+
+ymax = max(list(sT_wis)+list(sT))
+axes[0].set_ylim([0, ymax+0.5])
+axes[1].set_ylim([0, ymax+0.5])
+# Now plot the max height from the event onto this plot
+# event = np.ones(len(T))*model_max
+# axes.plot(T, event, 'g--')
+
+# <markdowncell>
+
+# ## Get some modeled wave data for an event to estimate it's characteristic return period
+
+# <markdowncell>
+
+# ### Define a new temporal range to search for a particular event (Hurricane Sandy) and get available DAP endpoints
 
 # <codecell>
 
@@ -287,9 +447,9 @@ jd_start = dt.datetime.strptime(start_date, '%Y-%m-%d %H:%M')
 jd_stop = dt.datetime.strptime(end_date, '%Y-%m-%d %H:%M')
 
 # convert User Input into FES filters
-start, stop = date_range(start_date, end_date)
+start, stop = fes_date_filter(start_date, end_date)
 
-filter_list = [fes.And([ bbox, start, stop, or_filt]) ]
+filter_list = [fes.And([ bbox, start, stop, or_filt])]
 # connect to CSW, explore it's properties
 # try request using multiple filters "and" syntax: [[filter1,filter2]]
 try:
@@ -388,156 +548,13 @@ except Exception as e:
 
 # <markdowncell>
 
-# #### Plot the model data for the event
+# ### Plot the model data for the event
 
 # <codecell>
 
 model_df.plot(figsize=(14, 6), title=model_df.name, legend=False)
 model_max = list(set(model_df.max().values))
 print 'Max Value is {0}'.format(model_max)
-
-# <markdowncell>
-
-# ### Extreme Value Analysis:
-
-# <codecell>
-
-annual_max = list(annual_max_dict.values()) 
-
-# <headingcell level=4>
-
-# Fit data to GEV distribution
-
-# <codecell>
-
-def gev_pdf(x):
-    return genextreme.pdf(x, xi, loc=mu, scale=sigma)
-
-# <codecell>
-
-mle = genextreme.fit(sorted(annual_max), 0)
-mu = mle[1]
-sigma = mle[2]
-xi = mle[0]
-print "The mean, sigma, and shape parameters are %s, %s, and %s, resp." % (mu, sigma, xi)
-
-# <headingcell level=4>
-
-# Probability Density Plot
-
-# <codecell>
-
-print annual_max
-min_x = min(annual_max)-0.5
-max_x = max(annual_max)+0.5
-x = np.linspace(min_x, max_x, num=100)
-y = [gev_pdf(z) for z in x]
-
-fig = plt.figure(figsize=(12,6))
-axes = fig.add_axes([0.1, 0.1, 0.8, 0.8])
-station_longName = get_station_longName(station_id)
-xlabel = (station_longName + " - Annual max Wave Height (m)")
-axes.set_title("Probability Density & Normalized Histogram")
-axes.set_xlabel(xlabel)
-axes.plot(x, y, color='Red')
-axes.hist(annual_max, bins=arange(min_x, max_x, abs((max_x-min_x)/10)), normed=1, color='Yellow')
-
-# <headingcell level=4>
-
-# Return Value Plot
-
-# <codecell>
-
-fig = plt.figure(figsize=(20,6))
-axes = fig.add_axes([0.1, 0.1, 0.8, 0.8])
-T=np.r_[1:500]
-sT = genextreme.isf(1./T, 0, mu, sigma)
-axes.semilogx(T, sT, 'r'), hold
-N=np.r_[1:len(annual_max)+1]; 
-Nmax=max(N);
-axes.plot(Nmax/N, sorted(annual_max)[::-1], 'bo')
-title = station_longName
-axes.set_title(title)
-axes.set_xlabel('Return Period (yrs)')
-axes.set_ylabel('Significant Wave Height (m)') 
-axes.grid(True)
-
-# Now plot the max height from the event onto this plot
-event = np.ones(len(T))*model_max
-axes.plot(T, event, 'g--')
-
-# <markdowncell>
-
-# ### All of the [WIS](http://wis.usace.army.mil/) stations annual maximum data was downloaded and saved to a json file (WIS_extremes.txt)
-
-# <markdowncell>
-
-# #### Get the closest WIS station and extract all of the annual max wave height data
-
-# <codecell>
-
-with open("./WIS_stations.txt") as json_file:
-    location_data = json.load(json_file)
-    
-wis_lats = []
-wis_lons = []
-wis_stations = []
-for station in location_data:
-    wis_lats.append(location_data[station]['lat'])
-    wis_lons.append(location_data[station]['lon'])
-    wis_stations.append(station)
-    
-# Get index of closest WIS station to obs station
-ind, dd = nearxy(wis_lons, wis_lats, station_lon, station_lat)
-
-# Now get read the wis data
-with open("./WIS_extremes.txt") as extremes_file:
-    wis_extremes = json.load(extremes_file)
-
-# Get the extremes from the closest station
-wis_station_id = wis_stations[ind]
-wis_lat = wis_lats[ind]
-wis_lon = wis_lons[ind]
-
-wis_maximums = []
-for year in wis_extremes[wis_station_id].keys():
-    wis_maximums.append(wis_extremes[wis_station_id][year]['height_max'])
-
-# <markdowncell>
-
-# #### Fit data to GEV distribution
-
-# <codecell>
-
-mle = genextreme.fit(sorted(wis_maximums), 0)
-mu = mle[1]
-sigma = mle[2]
-xi = mle[0]
-print "The mean, sigma, and shape parameters are %s, %s, and %s, resp." % (mu, sigma, xi)
-
-# <markdowncell>
-
-# #### Return value plot
-
-# <codecell>
-
-fig = plt.figure(figsize=(20,6))
-axes = fig.add_axes([0.1, 0.1, 0.8, 0.8])
-T=np.r_[1:500]
-sT = genextreme.isf(1./T, 0, mu, sigma)
-axes.semilogx(T, sT, 'r'), hold
-N=np.r_[1:len(wis_maximums)+1]; 
-Nmax=max(N);
-axes.plot(Nmax/N, sorted(wis_maximums)[::-1], 'bo')
-title = 'WIS ' + wis_station_id
-axes.set_title(title)
-axes.set_xlabel('Return Period (yrs)')
-axes.set_ylabel('Significant Wave Height (m)') 
-axes.grid(True)
-
-# Now plot the max height from the event onto this plot
-event = np.ones(len(T))*model_max
-axes.plot(T, event, 'g--')
 
 # <markdowncell>
 
@@ -589,6 +606,45 @@ m.line(get_coordinates(bounding_box, bounding_box_type), line_color='#ff0000', l
 
 inline_map(m)
 
+# <markdowncell>
+
+# ### Return value plot with event max overlayed as dashed line
+
 # <codecell>
 
+fig, axes = plt.subplots(2, 1, figsize=(20,12))
+# fig = plt.figure()
+# axes = fig.add_axes([0.1, 0.1, 0.8, 0.8])
+T=np.r_[1:500]
+sT = genextreme.isf(1./T, 0, mu, sigma)
+axes[0].semilogx(T, sT, 'r'), hold
+N=np.r_[1:len(annual_max)+1]; 
+Nmax=max(N);
+axes[0].plot(Nmax/N, sorted(annual_max)[::-1], 'bo')
+title = station_longName
+axes[0].set_title(title)
+axes[0].set_xlabel('Return Period (yrs)')
+axes[0].set_ylabel('Significant Wave Height (m)') 
+axes[0].grid(True)
+# Now plot the max height from the event onto this plot
+event = np.ones(len(T))*model_max
+axes[0].plot(T, event, 'g--')
+
+sT_wis = genextreme.isf(1./T, 0, mu_wis, sigma_wis)
+axes[1].semilogx(T, sT_wis, 'r'), hold
+N=np.r_[1:len(wis_maximums)+1]; 
+Nmax=max(N);
+axes[1].plot(Nmax/N, sorted(wis_maximums)[::-1], 'bo')
+title = 'WIS ' + wis_station_id
+axes[1].set_title(title)
+axes[1].set_xlabel('Return Period (yrs)')
+axes[1].set_ylabel('Significant Wave Height (m)') 
+axes[1].grid(True)
+
+ymax = max(list(sT_wis)+list(sT))
+axes[0].set_ylim([0, ymax+0.5])
+axes[1].set_ylim([0, ymax+0.5])
+
+# Now plot the max height from the event onto this plot
+axes[1].plot(T, event, 'g--')
 
