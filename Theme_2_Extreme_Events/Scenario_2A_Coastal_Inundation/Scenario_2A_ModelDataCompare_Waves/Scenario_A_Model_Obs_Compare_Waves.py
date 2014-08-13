@@ -200,7 +200,7 @@ obs_lat = [sta for sta in obs_loc_df['latitude (degree)']]
 
 # <codecell>
 
-ts_rng = pd.fes_date_filter(start=start_date, end=end_date)
+ts_rng = pd.date_range(start=start_date, end=end_date)
 ts = pd.DataFrame(index=ts_rng)
 
 Hs_obs_df = []

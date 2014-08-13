@@ -322,7 +322,7 @@ v_constraint = iris.Constraint(cube_func=name_in_list)
 # <codecell>
 
 # # Create time index for model DataFrame
-ts_rng = pd.fes_date_filter(start=jd_start, end=jd_stop, freq='6Min')
+ts_rng = pd.date_range(start=jd_start, end=jd_stop, freq='6Min')
 ts = pd.DataFrame(index=ts_rng)
 
 # Create list of model DataFrames for each station
