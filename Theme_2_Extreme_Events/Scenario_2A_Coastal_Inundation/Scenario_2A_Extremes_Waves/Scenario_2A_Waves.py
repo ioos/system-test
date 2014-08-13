@@ -263,7 +263,7 @@ for year in years:
     hs = nc.variables['wave_height']
     hs_data = np.array(nc.variables['wave_height'][:,0,0])
     # Replace fill values with NaN
-    hs_data[hs_data==hs._FillValue] = numpy.nan
+    hs_data[hs_data==hs._FillValue] = np.nan
     
     dates = num2date(nc_time[:],units=nc_time.units,calendar='gregorian')
     timestamp = np.array(dates)
