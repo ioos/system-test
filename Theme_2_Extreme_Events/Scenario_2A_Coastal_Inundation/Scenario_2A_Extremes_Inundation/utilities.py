@@ -37,7 +37,7 @@ name_list = ['water level',
 sos_name = 'water_surface_height_above_reference_datum'
 
 
-def dateRange(start_date='1900-01-01', stop_date='2100-01-01',
+def fes_date_filter(start_date='1900-01-01', stop_date='2100-01-01',
               constraint='overlaps'):
     """Hopefully something like this will be implemented in fes soon."""
     if constraint == 'overlaps':
