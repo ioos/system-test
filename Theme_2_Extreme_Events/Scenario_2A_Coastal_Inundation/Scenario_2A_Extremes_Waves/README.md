@@ -3,13 +3,14 @@
 ## Scenario 2A - Coastal Inundation
 
 ### Extreme Value Analysis - Waves
+This notebook tries to extract a long time series wave height data sets (10+ years) from NDBC for a return value analysis. In addition there are 2 files included, WIS_extremes.txt and WIS_stations.txt that contain the Wave Information Studies (WIS) hindcast station annual extremes data and station lat/lon data respectively.
 
 #### Requirements
 
 1. Using `pip`
     ```bash
     pip install -r pip-requirements.txt
-    pip install git+https://github.com/wrobstory/folium.git#egg=folium
+    pip install git+https://github.com/birdage/folium.git@clustered_markers#egg=folium --upgrade
     pip install git+https://github.com/SciTools/cartopy.git@v0.10.0
     pip install git+https://github.com/SciTools/iris.git@v1.6.1
     ```
@@ -17,12 +18,16 @@
 2. Using `conda`
     ```bash
     conda install --file conda-requirements.txt
-    conda install -c https://conda.binstar.org/rsignell iris=v1.6.2_RPS
+    conda install -c https://conda.binstar.org/rsignell iris
     ```
     If you are using environments within conda, be sure to specify it
     ```bash
     conda install -n yourenvname --file conda-requirements.txt
-    conda install -n yourenvname -c https://conda.binstar.org/rsignell iris=v1.6.2_RPS
+    conda install -n yourenvname -c https://conda.binstar.org/rsignell iris
+    ```
+    You will still need to pip install folium
+    ```bash
+    pip install git+https://github.com/birdage/folium.git@clustered_markers#egg=folium --upgrade
     ```
 
 #### Helper methods

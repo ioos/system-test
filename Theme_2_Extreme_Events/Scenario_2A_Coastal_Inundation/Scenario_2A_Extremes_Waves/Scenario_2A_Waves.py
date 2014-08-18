@@ -7,515 +7,343 @@
 
 # <markdowncell>
 
-# ### Can we estimate the return period of a wave height by obtaining long term wave height records from observed and modelled datasets?
+# ### Can we estimate the return period of a wave height by obtaining long term wave height records from observed and modeled datasets?
+# ####Methodology:
+# 
+# * Define temporal and spatial bounds of interest
+# * Define standard names of variable of interest to search for in data sets
+# * Search for available service endpoints in the NGDC CSW catalog meeting search criteria
+# * Extract OPeNDAP data endpoints from model datasets and SOS endpoints from station observation datasets
+# * Obtain long term observation data sets from a station within bounding box (10+ years)
+# * Define a new temporal range to search for a particular event (Hurricane Sandy)
+# * Using DAP (model) endpoints find all available model data sets in the bounding box, for the specified time range, and extract a model grid cell closest to the observation station
+# * Show observation stations and model grid points on a map (red marker for model grid points) 
+# * Find the maximum wave height during the event.
+# * Perform return period analysis on the long time series observation data and see where the modeled data falls
+# * Extract the annual maximum wave heights from the nearest WIS hindcast location (Over 20 Years!)
+# * Perform return period analysis on the long time series WIS hindcast
 
-# <headingcell level=4>
+# <markdowncell>
 
-# import required libraries
+# ### import required libraries
 
 # <codecell>
 
 import matplotlib.pyplot as plt
-from pylab import *
+from warnings import warn
+from io import BytesIO
 import sys
 import csv
 import json
+import time
 from scipy.stats import genextreme
 import scipy.stats as ss
 import numpy as np
 
 from owslib.csw import CatalogueServiceWeb
 from owslib import fes
+from IPython.display import HTML
+import folium #required for leaflet mapping
 import random
 import netCDF4
+from netCDF4 import num2date
 import pandas as pd
 import datetime as dt
 from pyoos.collectors.ndbc.ndbc_sos import NdbcSos
-import cStringIO
 import iris
-import urllib2
-import parser
-from lxml import etree       #TODO suggest using bs4 instead for ease of access to XML objects
-
+from collections import OrderedDict
 #generated for csw interface
-#from fes_date_filter_formatter import fes_date_filter  #date formatter (R.Signell)
+#from date_range_formatter import dateRange  #date formatter (R.Signell)
 import requests              #required for the processing of requests
-from utilities import * 
-
-from IPython.display import HTML
-import folium #required for leaflet mapping
-import calendar #used to get number of days in a month and year
+from utilities import (fes_date_filter, get_station_data, find_timevar, find_ij, nearxy, service_urls, mod_df, 
+                       get_coordinates, inline_map, get_station_longName, css_styles)
+css_styles()
 
 # <markdowncell>
 
-# some functions from [Rich Signell Notebook](http://nbviewer.ipython.org/github/rsignell-usgs/notebook/blob/fef9438303b49a923024892db1ef3115e34d8271/CSW/IOOS_inundation.ipynb)
-
-# <headingcell level=4>
-
-# Speficy Temporal and Spatial conditions
+# ### Define temporal and spatial bounds of interest
 
 # <codecell>
 
-#bounding box of interest,[bottom right[lat,lon], top left[lat,lon]]
 bounding_box_type = "box" 
-bounding_box = [[-73.94,40.67],[-69.94,42]]
+
+# Bounding Box [lon_min, lat_min, lon_max, lat_max]
+area = {'Hawaii': [-160.0, 18.0, -154., 23.0],
+        'Gulf of Maine': [-72.0, 41.0, -69.0, 43.0],
+        'New York harbor region': [-75., 39., -71., 41.5],
+        'Puerto Rico': [-75, 12, -55, 26],
+        'East Coast': [-77, 36, -73, 38],
+        'North West': [-130, 38, -121, 50],
+        'Gulf of Mexico': [-92, 28, -84, 31],
+        'Arctic': [-179, 63, -140, 80],
+        'North East': [-74, 40, -69, 42],
+        'Virginia Beach': [-76, 34, -74, 38]}
+
+bounding_box = area['Virginia Beach']
 
 #temporal range
-start_date = dt.datetime(1991,5,1).strftime('%Y-%m-%d %H:00')
-end_date = dt.datetime(2014,5,10).strftime('%Y-%m-%d %H:00')
-time_date_range = [start_date,end_date]  #start_date_end_date
+start_date = dt.datetime(1994,8,1).strftime('%Y-%m-%d %H:00')
+end_date = dt.datetime(2014,8,1).strftime('%Y-%m-%d %H:00')
 
 print start_date,'to',end_date
+
+# <markdowncell>
+
+# ### Define standard names of variable of interest to search for in data sets
+
+# <codecell>
+
+# put the names in a dict for ease of access 
+data_dict = {}
+sos_name = 'waves'
+data_dict["waves"] = {"names":['sea_surface_wave_significant_height',
+                               'significant_wave_height',
+                               'significant_height_of_wave',
+                               'sea_surface_wave_significant_height(m)',
+                               'sea_surface_wave_significant_height (m)',
+                               'water_surface_height'], 
+                      "sos_name":["waves"]} 
+
+# <markdowncell>
+
+# ### Search for available service endpoints in the NGDC CSW catalog meeting search criteria
 
 # <codecell>
 
 endpoint = 'http://www.ngdc.noaa.gov/geoportal/csw' # NGDC Geoportal
 csw = CatalogueServiceWeb(endpoint,timeout=60)
 
-for oper in csw.operations:
-    if oper.name == 'GetRecords':
-        #print '\nISO Queryables:\n',oper.constraints['SupportedISOQueryables']['values']
-        pass
-        
-#put the names in a dict for ease of access 
-data_dict = {}
-data_dict["waves"] = {"names":['sea_surface_wave_significant_height','significant_wave_height'], 
-                      "sos_name":["waves"]}      
-
-# <codecell>
-
-def fes_date_filter(start_date='1900-01-01',stop_date='2100-01-01',constraint='overlaps'):
-    if constraint == 'overlaps':
-        start = fes.PropertyIsLessThanOrEqualTo(propertyname='apiso:TempExtent_begin', literal=stop_date)
-        stop = fes.PropertyIsGreaterThanOrEqualTo(propertyname='apiso:TempExtent_end', literal=start_date)
-    elif constraint == 'within':
-        start = fes.PropertyIsGreaterThanOrEqualTo(propertyname='apiso:TempExtent_begin', literal=start_date)
-        stop = fes.PropertyIsLessThanOrEqualTo(propertyname='apiso:TempExtent_end', literal=stop_date)
-    return start,stop
-
-# <codecell>
-
 # convert User Input into FES filters
-start,stop = fes_date_filter(start_date,end_date)
-box = []
-box.append(bounding_box[0][0])
-box.append(bounding_box[0][1])
-box.append(bounding_box[1][0])
-box.append(bounding_box[1][1])
-bbox = fes.BBox(box)
+start,stop = fes_date_filter(start_date, end_date)
+bbox = fes.BBox(bounding_box)
 
 #use the search name to create search filter
-or_filt = fes.Or([fes.PropertyIsLike(propertyname='apiso:AnyText',literal=('*%s*' % val),
-                    escapeChar='\\',wildCard='*',singleChar='?') for val in data_dict["waves"]["names"]])
-val = 'Averages'
-not_filt = fes.Not([fes.PropertyIsLike(propertyname='apiso:AnyText',literal=('*%s*' % val),
-                        escapeChar='\\',wildCard='*',singleChar='?')])
+or_filt = fes.Or([fes.PropertyIsLike(propertyname='apiso:AnyText',literal='*%s*' % val,
+                    escapeChar='\\',wildCard='*',singleChar='?') for val in data_dict['waves']['names']])
 
-# <codecell>
-
-filter_list = [fes.And([ bbox, start, stop, or_filt, not_filt]) ]
+filter_list = [fes.And([ bbox, start, stop, or_filt]) ]
 # connect to CSW, explore it's properties
 # try request using multiple filters "and" syntax: [[filter1,filter2]]
-csw.getrecords2(constraints=filter_list,maxrecords=1000,esn='full')
-
-# <codecell>
-
-def service_urls(records,service_string='urn:x-esri:specification:ServiceType:odp:url'):
-    """
-    extract service_urls of a specific type (DAP, SOS) from records
-    """
-    urls=[]
-    for key,rec in records.iteritems():        
-        #create a generator object, and iterate through it until the match is found
-        #if not found, gets the default value (here "none")
-        url = next((d['url'] for d in rec.references if d['scheme'] == service_string), None)
-        if url is not None:
-            urls.append(url)
-    return urls
-
-# <codecell>
-
-#print records that are available
-print "number of datasets available: ",len(csw.records.keys())
+try:
+    csw.getrecords2(constraints=filter_list, maxrecords=1000, esn='full')
+except Exception as e:
+    print 'ERROR - ' + str(e)
+else:
+    print str(len(csw.records)) + " csw records found"
 
 # <markdowncell>
 
-# Print all the records (should you want too)
+# #### Dap URLS
 
 # <codecell>
 
-print "\n".join(csw.records)
+dap_urls = service_urls(csw.records)
 
-# <markdowncell>
-
-# Dap URLS
-
-# <codecell>
-
-dap_urls = service_urls(csw.records,service_string='urn:x-esri:specification:ServiceType:odp:url')
-#remove duplicates and organize
+#remove duplicates and sort
 dap_urls = sorted(set(dap_urls))
 print "Total DAP:",len(dap_urls)
-#print the first 5...
-print "\n".join(dap_urls[:])
+#print the first 10...
+print "\n".join(dap_urls[1:10])
 
 # <markdowncell>
 
-# SOS URLs
-
-# <markdowncell>
-
-# #### TODO: Fix waves not being found in catalog
+# #### SOS URLs
 
 # <codecell>
 
-sos_urls = service_urls(csw.records,service_string='urn:x-esri:specification:ServiceType:sos:url')
-#remove duplicates and organize
-if len(sos_urls) ==0:
-    sos_urls.append("http://sdf.ndbc.noaa.gov/sos/server.php")  #?request=GetCapabilities&service=SOS
+sos_urls = service_urls(csw.records,service='sos:url')
 
+#remove duplicates and sort
 sos_urls = sorted(set(sos_urls))
 print "Total SOS:",len(sos_urls)
-print "\n".join(sos_urls)
+print "\n".join(sos_urls[1:10])
 
 # <markdowncell>
 
-# ### SOS Requirements
-
-# <codecell>
-
-#use the get caps to get station start and get time
+# #### SOS - Get most recent observations from all stations in bounding box
 
 # <codecell>
 
 start_time = dt.datetime.strptime(start_date,'%Y-%m-%d %H:%M')
 end_time = dt.datetime.strptime(end_date,'%Y-%m-%d %H:%M')
 
-# <codecell>
-
 iso_start = start_time.strftime('%Y-%m-%dT%H:%M:%SZ')
 iso_end = end_time.strftime('%Y-%m-%dT%H:%M:%SZ')
 
-collector = NdbcSos()
-collector.start_time = start_time
-collector.end_time = end_time
-collector.variables = data_dict["waves"]["sos_name"]
-collector.server.identification.title
-print collector.start_time,":", collector.end_time
-
-# <codecell>
-
 print "Date: ",iso_start," to ", iso_end
-box_str=','.join(str(e) for e in box)
-print "Lat/Lon Box: ",box_str
-#grab the sos url and use it for the service
-url=(sos_urls[0]+'?'
-     'service=SOS&request=GetObservation&version=1.0.0&'
-     'observedProperty=%s&offering=urn:ioos:network:noaa.nws.ndbc:all&'
-     'featureOfInterest=BBOX:%s&responseFormat=text/tab-separated-values&eventTime=%s') % ("waves",box_str,iso_end)
-print url
-r = requests.get(url)
-data = r.text
-#get the headers for the cols
-data = data.split("\n")
-headers =  data[0]
-station_list_dict = dict()
-#parse the headers so i can create a dict
-c = 0
-for h in headers.split("\t"):
-    field = h.split(":")[0].split(" ")[0]
-    station_list_dict[field] = {"id":c}
-    c+=1
-print "Num of fields:", c
+box_str=','.join(str(e) for e in bounding_box)
+
+collector = NdbcSos()
+collector.variables = data_dict["waves"]["sos_name"]
+collector.server.identification.title  
+
+# Don't specify start and end date in the filter and the most recent observation will be returned
+collector.filter(bbox=bounding_box,
+                 variables=data_dict["waves"]["sos_name"])
+
+response = collector.raw(responseFormat="text/csv")
+obs_loc_df = pd.read_csv(BytesIO(response.encode('utf-8')),
+                         parse_dates=True,
+                         index_col='date_time')
 
 # <codecell>
 
-#create dict of stations
-station_list = []
-for i in range(1,len(data)):
-    station_info = data[i].split("\t")
-    if len(station_info)>1:
-        station = dict()
-        for field in station_list_dict.keys():        
-            col = station_list_dict[field]["id"]
-            if col < len(station_info):
-                station[field] = station_info[col]     
-        station["type"] = "obs"        
-        station_list.append(station)
+obs_loc_df.head()
 
 # <markdowncell>
 
-# #### Add wis site infotmation to station list
+# #### Parse the data frame for station names
 
 # <codecell>
 
-print len(station_list)    
-print float(station_list[0]["longitude"])
-print station_list[0]["latitude"]
+stations = [sta.split(':')[-1] for sta in obs_loc_df['station_id']]
+obs_lon = [sta for sta in obs_loc_df['longitude (degree)']]
+obs_lat = [sta for sta in obs_loc_df['latitude (degree)']]
+
+# <markdowncell>
+
+# ## Obtain long term observation data sets from a station within bounding box (10+ years)
+# ### For simplicity let's pick a station and get all the data
+
+# <markdowncell>
+
+# <div class="error"><strong>Lack of long time series wave data at NDBC</strong> - NDBC SOS doesn't serve all of the historical data sets. See issue [here] (https://github.com/ioos/system-test/issues/137) </div>
 
 # <codecell>
 
-from shapely.geometry import Polygon,Point,LineString
-import sqlite3 as lite
+# Let's pick one station for simplicity - Virginia Beach (44014)
+
+# Time cell execution
+tic = time.time()
+
+station = ['44014']
+station_id = station[0]
+
+station_lon = obs_loc_df.loc[obs_loc_df['station_id']==('urn:ioos:station:wmo:44014')]['longitude (degree)'].values
+station_lat = obs_loc_df.loc[obs_loc_df['station_id']==('urn:ioos:station:wmo:44014')]['latitude (degree)'].values
+
+sos_name = 'waves'
+collector = NdbcSos()
+collector.start_time = start_time
+collector.end_time = end_time
+field_of_interest = "sea_surface_wave_significant_height (m)"
+
+# Get all of the data into a list of yearly dataframes
+yearly_df = get_station_data(collector, station_id, sos_name, field_of_interest)
+
+toc = time.time()
+sos_elapsed = toc-tic
 
 # <codecell>
 
-#get the WIS stations that are in the bounding box
-#generate polygon that matches that of the bounding box
-poly = Polygon(get_coordinates(bounding_box,bounding_box_type))
-db = r'/Users/rpsdev/Documents/d3/wis_data/wis_stations.db'
-print poly
-try:
-    conn = lite.connect(db)
-    cur = conn.cursor()
-    cur.execute("SELECT NAME,LAT,LON FROM station_list")
-    records = cur.fetchall()
-    st_yr =int(collector.start_time.year)
-    ed_yr =int(collector.end_time.year+1)
-    min_station_line = -1
-    min_station_line_set = True
-    min_station_name = ""
-    station_lat = float(station_list[0]["latitude"])
-    station_lon = float(station_list[0]["longitude"])
-    for r in records:
-        #name,lat,lon
-        station_is_contained = poly.contains(Point(float(r[1]),float(r[2])))
-        #if the station is in the bounds, store it as such
-        if station_is_contained:
-            st_name = r[0]
-            #find the closest station
-            
-            line = LineString([(float(r[1]),float(r[2])),(station_lat,station_lon)])
-            if min_station_line_set:
-                min_station_line = line.length
-                min_station_record = r
-            if line.length < min_station_line:
-                min_station_record = r
-                
-    station = dict()
-    station["latitude"] = float(min_station_record[1])
-    station["longitude"] = float(min_station_record[2])
-    st_name = min_station_record[0]
-    station["long_name"] = "WIS:"+ st_name
-    station["id"] = st_name
-    station["station_id"] = st_name
-    station["type"] = "model"
-    station_data = dict()
-    for yr in range(st_yr,ed_yr+1):
-        #get the max value from the monthly max to give yearly max
-        cur.execute("select MAX(hmax) from station_data where name="+ str(st_name) +" and date >="+str(yr)+"01 and date <="+str(yr)+"12")
-        yearmax = cur.fetchall()
-        yearmax = yearmax[0][0]
-        if yearmax is None:
-            print "year ", yr," is none"
-        else:
-            station_data[str(yr)] = {"max":yearmax,"num_samples":0,"date_string":""}
-    station["data"] = station_data
-    station_list.append(station)
-except lite.Error:
-    print "Error open db.\n"
+print 'Execution time through SOS - %0.2f mins' % (sos_elapsed/60)
 
+# <markdowncell>
+
+# <div class="error"><strong>SOS server is REALLY slow and sometimes times out! </strong> Let's just go straight to the DAP endpoint instead. It's faster and has all of the data</div>
+
+# <markdowncell>
+
+# ### Get the data directly from the DAP endpoint
+
+# <markdowncell>
+
+# <div class="info"><strong></strong>Data can be retrieved directly from http://dods.ndbc.noaa.gov/thredds/dodsC/data/stdmet/44014/</div>
 
 # <codecell>
 
-#print out the station name
-print station_list[0]["sensor_id"]
-print station_list[1]
-print len(station_list) 
-
-# <codecell>
-
-def get_station_long_name(sta):
-    """
-    get longName for specific station
-    """
-    url=(sos_urls[0]+'?service=SOS&'
-        'request=DescribeSensor&version=1.0.0&outputFormat=text/xml;subtype="sensorML/1.0.1"&'
-        'procedure=%s') % sta    
-    tree = etree.parse(urllib2.urlopen(url))
-    root = tree.getroot()
-    longName=root.xpath("//sml:identifier[@name='longName']/sml:Term/sml:value/text()", namespaces={'sml':"http://www.opengis.net/sensorML/1.0.1"})
-    return longName
-
-# <codecell>
-
-def get_sos_data(collector,station_id,sos_name,date_time,field_of_interest):
-    print "Station:",station_id
-    collector.features = [station_id]
-    collector.variables = [sos_name] 
-    station_data = dict()
-    #loop through the years and get the data needed
-    st_yr =int(collector.start_time.year)
-    ed_yr =int(collector.end_time.year+1)
-    #only 31 days are allowed to be requested at once
-    for year_station in range(st_yr,ed_yr):    
-        year_station_data = []
-        date_list = []
-        for month in range (1,13):
-                num_days = calendar.monthrange(year_station, month)[1]     
-
-                st = dt.datetime(year_station,month,1,0,0,0)
-                ed = dt.datetime(year_station,month,num_days,23,59,59)
-
-                start_time1 = dt.datetime.strptime(str(st),'%Y-%m-%d %H:%M:%S')
-                end_time1 = dt.datetime.strptime(str(ed),'%Y-%m-%d %H:%M:%S')
-                
-                collector.start_time = start_time1
-                collector.end_time = end_time1
-                 
-                try:
-                    response = collector.raw(responseFormat="text/csv")
-                    #get the response then get the data
-                    data =  response.split("\n")
-                    first_row = True
-                    if len(data)>2:
-                        for d in data:
-                            d_row = (d.split(","))
-                            
-                            if first_row:
-                                #find the field of interest
-                                idx1 = [d_row.index(i) for i in d_row if field_of_interest in i][0]
-                                idx2 = [d_row.index(i) for i in d_row if date_time in i][0]
-                                first_row = False
-                            else:  
-                                if idx1<len(d_row):
-                                    year_station_data.append(d_row[idx1])
-                                else:
-                                    #print idx1,":",d_row
-                                    pass
-                                    
-                                if idx2<len(d_row):
-                                    date_list.append(d_row[idx2])
-                                else:
-                                    #print idx2,":",d_row
-                                    pass
+tic = time.time()
+years = range(1990,2013)
+yearly_df = []
+for year in years:
+    # Build URL
+    url = 'http://dods.ndbc.noaa.gov/thredds/dodsC/data/stdmet/{0}/{1}h{2}.nc'.format(station_id, station_id, year)
+    nc = netCDF4.Dataset(url, 'r')
+    nc_time = nc.variables['time']
+    hs = nc.variables['wave_height']
+    hs_data = np.array(nc.variables['wave_height'][:,0,0])
+    # Replace fill values with NaN
+    hs_data[hs_data==hs._FillValue] = np.nan
     
-                    else:
-                        #print "no data...:",year_station,":",month
-                        pass
-                except Exception, e: #should only fail if the data is not there
-                    print e,":",year_station,":",month
+    dates = num2date(nc_time[:],units=nc_time.units,calendar='gregorian')
+    timestamp = np.array(dates)
 
-        #caluclate the max values   
-        p = np.array(year_station_data,dtype=np.float)     
-        if len(p)>2:
-            station_data[str(year_station)] = {"max":np.amax(p),"num_samples":len(p),"date_string":date_list[np.argmax(p)]}
-            
-                    
-    #reset the collector once complete            
-    collector.start_time = start_time
-    collector.end_time = end_time    
-    return station_data
+    data = {}
+    data['Wave Height (m)'] = hs_data
+    df = pd.DataFrame(data, index=timestamp)
+    yearly_df.append(df)
 
-# <codecell>
+toc = time.time()
+dap_elapsed = toc-tic
+print 'Execution time through DAP - %0.2f mins' % (dap_elapsed/60)
 
-from pydap.client import open_url
+# <markdowncell>
+
+# ### Get the observed annual maximums into a dictionary
 
 # <codecell>
 
-def get_model_data(dap_urls,st_lat,st_lon):
-    # use only data within 0.04 degrees (about 4 km)
-    max_dist=0.04 
+annual_max_dict = OrderedDict()
+for df in yearly_df:
+    year = pd.to_datetime(df['Wave Height (m)'].argmax()).date().year
+    annual_max_dict[str(year)] = df['Wave Height (m)'].max()
+
+# <markdowncell>
+
+# ## Get WIS Hindcast data
+
+# <markdowncell>
+
+# ### All of the [WIS](http://wis.usace.army.mil/) stations annual maximum data was downloaded and saved to a json file (WIS_extremes.txt)
+
+# <markdowncell>
+
+# The Wave Information Studies (WIS) is a US Army Corps of Engineers (USACE)   sponsored project that generates consistent, hourly, long-term (20+ years) wave climatologies along all US coastlines, including the Great Lakes and US island territories.  The WIS program originated in the Great Lakes in the mid 1970’s and migrated to the Atlantic, Gulf of Mexico and Pacific Oceans. 
+
+# <markdowncell>
+
+# #### Get the closest WIS station and extract all of the annual max wave height data as another source of long term wave heights to compare
+
+# <codecell>
+
+with open("./WIS_stations.txt") as json_file:
+    location_data = json.load(json_file)
     
-    # use only data where the standard deviation of the time series exceeds 0.01 m (1 cm)
-    # this eliminates flat line model time series that come from land points that 
-    # should have had missing values.
-    min_var=0.01
-    for url in dap_urls:
-        try:
-           pass            
-        except:
-            pass
-        
+wis_lats = []
+wis_lons = []
+wis_stations = []
+for station in location_data:
+    wis_lats.append(location_data[station]['lat'])
+    wis_lons.append(location_data[station]['lon'])
+    wis_stations.append(station)
+    
+# Get index of closest WIS station to obs station
+ind, dd = nearxy(wis_lons, wis_lats, station_lon, station_lat)
+
+# Now get read the wis data
+with open("./WIS_extremes.txt") as extremes_file:
+    wis_extremes = json.load(extremes_file)
+
+# Get the extremes from the closest station
+wis_station_id = wis_stations[ind]
+wis_lat = wis_lats[ind]
+wis_lon = wis_lons[ind]
+
+wis_maximums = []
+for year in wis_extremes[wis_station_id].keys():
+    wis_maximums.append(wis_extremes[wis_station_id][year]['height_max'])
+
+# <markdowncell>
+
+# ## Extreme Value Analysis: Perform on both the observed and WIS hindcast data
 
 # <codecell>
 
-#get model data for a station
-get_model_data(dap_urls,41.138,-72.665)
+annual_max = list(annual_max_dict.values()) 
 
-# <codecell>
+# <markdowncell>
 
-#Embeds the HTML source of the map directly into the IPython notebook.
-
-def inline_map(map):   
-    map._build_map()
-    return HTML('<iframe srcdoc="{srcdoc}" style="width: 100%; height: 500px; border: none"></iframe>'.format(srcdoc=map.HTML.replace('"', '&quot;')))
-
-map = folium.Map(location=[bounding_box[0][1], bounding_box[0][0]], zoom_start=6)
-
-station_yearly_max = []
-for s in station_list:
-    #get the station data from the sos end point
-    if s["type"] is "obs":
-        #get the long name        
-        station_num = str(s['station_id']).split(':')[-1]
-        s["station_num"] = station_num
-        s["long_name"] = get_station_long_name(s['station_id'])
-        raw_data = get_sos_data(collector,station_num,"waves","date_time","sea_surface_wave_significant_height (m)")    
-        s["data"] = raw_data
-    if "latitude" in s:
-        popup_string = '<b>Station:</b><br>'+str(s['station_id']) + "<br><b>Long Name:</b><br>"+str(s["long_name"])+"<br><br>"+str(s["type"])
-        map.simple_marker([s["latitude"],s["longitude"]],popup=popup_string)
-# Create the map and add the bounding box line
-map.line(get_coordinates(bounding_box,bounding_box_type), line_color='#FF0000', line_weight=5)
-
-inline_map(map)
-
-# <codecell>
-
-import prettyplotlib as ppl
-fig, ax = plt.subplots(1)
-
-# Show the whole color range
-for s in station_list:
-    if "data" in s:
-        years = s["data"].keys()
-        xx = []
-        yx = []
-        for y in years:                
-            val = s["data"][y]["max"]            
-            if val is not None:
-                try:
-                    #round to 2dp                    
-                    val = "%.2f" % val
-                    yx.append(val)
-                    xx.append(int(y))
-                except:
-                    pass
-                    
-        #ppl.scatter(ax, xx, yx,alpha=0.8,edgecolor='black',linewidth=0.15 ,label=str(s["station_num"])+":"+str(s["long_name"][0]))
-        ppl.scatter(ax, xx, yx,alpha=0.8,edgecolor='black',linewidth=0.15 ,label=str(s["long_name"]))  
-     
-        
-ax.legend(loc=1)
-ax.set_title('Annual Max sea surface wave significant height (m) (Observed & Model)')
-ax.set_xlabel('Year')
-ax.set_ylabel('sea surface wave significant height (m)')
-
-ax.set_xticks(numpy.arange(st_yr,ed_yr,2))
-fig.set_size_inches(14,8)
-
-# Shink current axis by 20%
-box = ax.get_position()
-ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
-# Put a legend to the right of the current axis
-ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
-
-# <headingcell level=3>
-
-# Extreme Value Analysis:
-
-# <codecell>
-
-annual_max = yx
-data_levels = []
-for i in annual_max:
-    data_levels.append(float(i))
-annual_max = data_levels    
-
-# <headingcell level=4>
-
-# Fit data to GEV distribution
+# ### Fit observation data to GEV distribution
 
 # <codecell>
 
@@ -530,58 +358,293 @@ sigma = mle[2]
 xi = mle[0]
 print "The mean, sigma, and shape parameters are %s, %s, and %s, resp." % (mu, sigma, xi)
 
-# <headingcell level=4>
+# <markdowncell>
 
-# Probability Density Plot
+# ### Probability Density Plot
 
 # <codecell>
 
-min_x = min(annual_max_levels)-0.5
-max_x = max(annual_max_levels)+0.5
+min_x = min(annual_max)-0.5
+max_x = max(annual_max)+0.5
 x = np.linspace(min_x, max_x, num=100)
 y = [gev_pdf(z) for z in x]
 
 fig = plt.figure(figsize=(12,6))
 axes = fig.add_axes([0.1, 0.1, 0.8, 0.8])
-xlabel = (s["long_name"] + " - Annual max Wave Height (m)")
+station_longName = get_station_longName(station_id)
+xlabel = (station_longName + " - Annual max Wave Height (m)")
 axes.set_title("Probability Density & Normalized Histogram")
 axes.set_xlabel(xlabel)
 axes.plot(x, y, color='Red')
-axes.hist(annual_max_levels, bins=arange(min_x, max_x, abs((max_x-min_x)/10)), normed=1, color='Yellow')
+axes.hist(annual_max, bins=arange(min_x, max_x, abs((max_x-min_x)/10)), normed=1, color='Yellow')
 
-# <headingcell level=4>
+# <markdowncell>
 
-# Return Value Plot
+# ### Fit WIS data to GEV distribution
 
 # <codecell>
 
-fig = plt.figure(figsize=(20,6))
-axes = fig.add_axes([0.1, 0.1, 0.8, 0.8])
+mle_wis = genextreme.fit(sorted(wis_maximums), 0)
+mu_wis = mle_wis[1]
+sigma_wis = mle_wis[2]
+xi_wis = mle_wis[0]
+print "The mean, sigma, and shape parameters are %s, %s, and %s, resp." % (mu_wis, sigma_wis, xi_wis)
+
+# <markdowncell>
+
+# ### Return Value Plot
+
+# <codecell>
+
+fig, axes = plt.subplots(2, 1, figsize=(20,12))
+# fig = plt.figure()
+# axes = fig.add_axes([0.1, 0.1, 0.8, 0.8])
 T=np.r_[1:500]
 sT = genextreme.isf(1./T, 0, mu, sigma)
-axes.semilogx(T, sT, 'r'), hold
-N=np.r_[1:len(annual_max_levels)+1]; 
+axes[0].semilogx(T, sT, 'r'), hold
+N=np.r_[1:len(annual_max)+1]; 
 Nmax=max(N);
-axes.plot(Nmax/N, sorted(annual_max_levels)[::-1], 'bo')
-title = s["long_name"][0] 
-axes.set_title(title)
-axes.set_xlabel('Return Period (yrs)')
-axes.set_ylabel('Return Value') 
-axes.grid(True)
+axes[0].plot(Nmax/N, sorted(annual_max)[::-1], 'bo')
+title = station_longName
+axes[0].set_title(title)
+axes[0].set_xlabel('Return Period (yrs)')
+axes[0].set_ylabel('Significant Wave Height (m)') 
+axes[0].grid(True)
 
-# <headingcell level=4>
+sT_wis = genextreme.isf(1./T, 0, mu_wis, sigma_wis)
+axes[1].semilogx(T, sT_wis, 'r'), hold
+N=np.r_[1:len(wis_maximums)+1]; 
+Nmax=max(N);
+axes[1].plot(Nmax/N, sorted(wis_maximums)[::-1], 'bo')
+title = 'WIS ' + wis_station_id
+axes[1].set_title(title)
+axes[1].set_xlabel('Return Period (yrs)')
+axes[1].set_ylabel('Significant Wave Height (m)') 
+axes[1].grid(True)
 
-# Compute Confidence Intervals
+ymax = max(list(sT_wis)+list(sT))
+axes[0].set_ylim([0, ymax+0.5])
+axes[1].set_ylim([0, ymax+0.5])
+# Now plot the max height from the event onto this plot
+# event = np.ones(len(T))*model_max
+# axes.plot(T, event, 'g--')
+
+# <markdowncell>
+
+# ## Get some modeled wave data for an event to estimate it's characteristic return period
+
+# <markdowncell>
+
+# ### Define a new temporal range to search for a particular event (Hurricane Sandy) and get available DAP endpoints
 
 # <codecell>
 
-def conf_int_scipy(x, ci=0.95):
-  low_per = 100*(1-ci)/2.
-  high_per = 100*ci + low_per
-  mn = x.mean()
-  cis = ss.scoreatpercentile(x, low_per, high_per)
-  return mn, cis
+#temporal range (Hurricane Sandy Oct 25 2014 - Nov 2 2014)
+start_date = dt.datetime(2012,10,25).strftime('%Y-%m-%d %H:00')
+end_date = dt.datetime(2012,11,2).strftime('%Y-%m-%d %H:00')
+
+jd_start = dt.datetime.strptime(start_date, '%Y-%m-%d %H:%M')
+jd_stop = dt.datetime.strptime(end_date, '%Y-%m-%d %H:%M')
+
+# convert User Input into FES filters
+start, stop = fes_date_filter(start_date, end_date)
+
+filter_list = [fes.And([ bbox, start, stop, or_filt])]
+# connect to CSW, explore it's properties
+# try request using multiple filters "and" syntax: [[filter1,filter2]]
+try:
+    csw.getrecords2(constraints=filter_list, maxrecords=1000, esn='full')
+except Exception as e:
+    print 'ERROR - ' + str(e)
+    
+dap_urls = service_urls(csw.records)
+
+#remove duplicates and sort
+dap_urls = sorted(set(dap_urls))
+print "Total DAP:",len(dap_urls)
+#print the first 5...
+print "\n".join(dap_urls[10:15])
 
 # <codecell>
 
+name_in_list = lambda cube: cube.standard_name in data_dict['waves']['names']
+constraint = iris.Constraint(cube_func=name_in_list)
+
+# <codecell>
+
+# Create time index for model DataFrame
+ts_rng = pd.date_range(start=jd_start, end=jd_stop, freq='H')
+ts = pd.DataFrame(index=ts_rng)
+
+# Create list of model DataFrames for each station
+model_df = pd.DataFrame(index=ts.index)
+
+model_lat = []
+model_lon = []
+
+# Use only data within 0.4 degrees.
+max_dist = 0.4
+
+# Use only data where the standard deviation of the time series exceeds 0.01 m (1 cm).
+# This eliminates flat line model time series that come from land points that should have had missing values.
+min_var = 0.01
+
+#Try the WaveWatchIII global model
+url = 'http://oos.soest.hawaii.edu/thredds/dodsC/hioos/model/wav/ww3/WaveWatch_III_Global_Wave_Model_best.ncd'
+try:
+    print 'Attemping to load {0}'.format(url)
+    cube = iris.load_cube(url, constraint)
+
+    # take first 20 chars for model name
+    mod_name = cube.attributes['title'][0:30]
+    r = cube.shape
+    timevar = find_timevar(cube)
+    lat = cube.coord(axis='Y').points
+    lon = cube.coord(axis='X').points
+    # Convert longitude to [-180 180]
+    if max(lon) > 180:
+        lon[lon>180] = lon[lon>180]-360
+    jd = timevar.units.num2date(timevar.points)
+    start = timevar.units.date2num(jd_start)
+    istart = timevar.nearest_neighbour_index(start)
+    stop = timevar.units.date2num(jd_stop)
+    istop = timevar.nearest_neighbour_index(stop)
+
+    # Only proceed if we have data in the range requested.
+    if istart != istop:
+        # Wave Watch III uses a 4D grid (time, z, lat, lon)
+        d = cube[0, 0, :, :].data
+        if len(lon.shape) == 1:
+            new_lon, new_lat = np.meshgrid(lon, lat)
+        else:
+            new_lon, new_lat = lon, lat
+
+        # Find the closest non-land point from a structured grid model.
+        j, i, dd = find_ij(new_lon, new_lat, d, station_lon, station_lat)
+
+        # Keep the lat lon of the grid point
+        model_lat = lat[j].tolist()
+        model_lon = lon[i].tolist()
+
+        # Only use if model cell is within max_dist of station
+        if dd <= max_dist:
+            arr = cube[istart:istop, 0, j, i].data
+            if arr.std() >= min_var:
+                c = mod_df(arr, timevar, istart, istop,
+                           mod_name, ts)
+                model_df = pd.concat([model_df, c], axis=1)
+                model_df.name = get_station_longName(str(station_id))
+            else:
+                print 'Min variance error'
+        else:
+            print 'Max dist error'
+    else:
+        print 'No data in range'
+except Exception as e:
+    warn("\n%s\n" % e)
+    pass
+        
+        
+
+# <markdowncell>
+
+# ### Plot the model data for the event
+
+# <codecell>
+
+model_df.plot(figsize=(14, 6), title=model_df.name, legend=False)
+model_max = list(set(model_df.max().values))
+print 'Max Value is {0}'.format(model_max)
+
+# <markdowncell>
+
+# ### Plot the Observation Stations and Model Points on Map
+
+# <codecell>
+
+# Find center of bounding box
+lat_center = abs(bounding_box[3]-bounding_box[1])/2 + bounding_box[1]
+lon_center = abs(bounding_box[0]-bounding_box[2])/2 + bounding_box[0]
+m = folium.Map(location=[lat_center, lon_center], zoom_start=8)
+
+# Now loop through stations and plot markers
+for n in range(len(stations)):
+    # Get the station name
+    name = stations[n]
+    longname = get_station_longName(str(name))
+
+    # Get obs station lat/lon
+    olat = obs_lat[n]
+    olon = obs_lon[n]
+    popup_string = ('<b>Station:</b><br>'+ longname)
+    
+    # Create obs station marker|
+    if olat != station_lat:
+        m.simple_marker([olat, olon], popup=popup_string, marker_color = 'red')
+    else:
+        m.simple_marker([olat, olon], popup=popup_string)
+
+# Add the model data point
+if model_lat:
+    # Get model grid points lat/lon
+    mlat = model_lat
+    mlon = model_lon
+    # Plot a line from obs station to corresponding model grid point
+    data_1=[station_lat, station_lon]
+    data_2=[model_lat, model_lon]
+    m.line([data_1,data_2],line_color='#00FF00', line_weight=5)
+
+    # Create model grid point marker
+    popup_string = ('<b>WW3 Model Grid Point</b>')
+    m.simple_marker([mlat, mlon], popup=popup_string, marker_color='purple')
+    
+    # Add WIS station
+    popup_string = ('<b>WIS station</b>')
+    m.simple_marker([wis_lat, wis_lon], popup=popup_string, marker_color='green')
+
+m.line(get_coordinates(bounding_box, bounding_box_type), line_color='#ff0000', line_weight=5)
+
+inline_map(m)
+
+# <markdowncell>
+
+# ### Return value plot with event max overlayed as dashed line
+
+# <codecell>
+
+fig, axes = plt.subplots(2, 1, figsize=(20,12))
+# fig = plt.figure()
+# axes = fig.add_axes([0.1, 0.1, 0.8, 0.8])
+T=np.r_[1:500]
+sT = genextreme.isf(1./T, 0, mu, sigma)
+axes[0].semilogx(T, sT, 'r'), hold
+N=np.r_[1:len(annual_max)+1]; 
+Nmax=max(N);
+axes[0].plot(Nmax/N, sorted(annual_max)[::-1], 'bo')
+title = station_longName
+axes[0].set_title(title)
+axes[0].set_xlabel('Return Period (yrs)')
+axes[0].set_ylabel('Significant Wave Height (m)') 
+axes[0].grid(True)
+# Now plot the max height from the event onto this plot
+event = np.ones(len(T))*model_max
+axes[0].plot(T, event, 'g--')
+
+sT_wis = genextreme.isf(1./T, 0, mu_wis, sigma_wis)
+axes[1].semilogx(T, sT_wis, 'r'), hold
+N=np.r_[1:len(wis_maximums)+1]; 
+Nmax=max(N);
+axes[1].plot(Nmax/N, sorted(wis_maximums)[::-1], 'bo')
+title = 'WIS ' + wis_station_id
+axes[1].set_title(title)
+axes[1].set_xlabel('Return Period (yrs)')
+axes[1].set_ylabel('Significant Wave Height (m)') 
+axes[1].grid(True)
+
+ymax = max(list(sT_wis)+list(sT))
+axes[0].set_ylim([0, ymax+0.5])
+axes[1].set_ylim([0, ymax+0.5])
+
+# Now plot the max height from the event onto this plot
+axes[1].plot(T, event, 'g--')
 
