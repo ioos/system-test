@@ -506,7 +506,7 @@ for idx in range(0, len(fields)):
                    label=station_label, s=marker_size,
                    c=np.random.rand(3, 1), marker="o")
         ax.set_xlim([2000, 2015])
-        ax.set_title("Yearly Max Speed Per Station, Marker Scaled Per"
+        ax.set_title("Yearly Max Speed Per Station, Marker Scaled Per "
                      "Annual Pts (bigger = more pts per year)")
         ax.set_ylabel("speed (knots)")
         ax.set_xlabel("Year")
