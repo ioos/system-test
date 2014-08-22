@@ -37,7 +37,7 @@ import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
 from matplotlib.transforms import offset_copy
 from cartopy.io.img_tiles import MapQuestOpenAerial
-from pandas import DataFrame, fes_date_filter, read_csv, concat
+from pandas import DataFrame, date_range, read_csv, concat
 
 from iris.exceptions import CoordinateNotFoundError, ConstraintMismatchError
 
@@ -266,7 +266,7 @@ print(stations)
 
 # <codecell>
 
-ts_rng = fes_date_filter(start=jd_start, end=jd_stop, freq='6Min')
+ts_rng = date_range(start=jd_start, end=jd_stop, freq='6Min')
 ts = DataFrame(index=ts_rng)
 print(jd_start, jd_stop)
 print(len(ts))
@@ -428,15 +428,14 @@ for df in obs_df:
 
 # <codecell>
 
-if True:
-    for df in obs_df:
-        amean = df[jd_start:jd_now].mean()
-        name = df.name
-        df = df - amean + amean.ix[0]
-        df.name = name
-        ax = df.plot(figsize=(14, 6), title=df.name, legend=False)
-        plt.setp(ax.lines[0], linewidth=4.0, color='0.7', zorder=1)
-        ax.legend()
-        ax.set_ylabel('m')
-        print(amean.ix[0] - amean)
+for df in obs_df:
+    amean = df[jd_start:jd_now].mean()
+    name = df.name
+    df = df - amean + amean.ix[0]
+    df.name = name
+    ax = df.plot(figsize=(14, 6), title=df.name, legend=False)
+    plt.setp(ax.lines[0], linewidth=4.0, color='0.7', zorder=1)
+    ax.legend()
+    ax.set_ylabel('m')
+    print(amean.ix[0] - amean)
 
