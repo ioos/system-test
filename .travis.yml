@@ -1,0 +1,47 @@
+language: python
+
+python:
+    - "2.7"
+    #- "3.4"
+
+before_install:
+    - sudo apt-get update -qq
+    # GUI
+    - "export DISPLAY=:99.0"
+    - "sh -e /etc/init.d/xvfb start"
+
+install:
+    # Make sure system components are up to date.
+    - sudo apt-get update
+    # Install Miniconda so we can use it to manage dependencies.
+    - export CONDA_BASE=http://repo.continuum.io/miniconda/Miniconda
+    - if [[ "$TRAVIS_PYTHON_VERSION" == 2* ]]; then
+        wget ${CONDA_BASE}-3.4.2-Linux-x86_64.sh -O miniconda.sh;
+      else
+        wget ${CONDA_BASE}3-3.4.2-Linux-x86_64.sh -O miniconda.sh;
+      fi
+    - bash miniconda.sh -b -p $HOME/miniconda
+    - export PATH="$HOME/miniconda/bin:$PATH"
+    # Create the basic testing environment.
+    - conda config --set always_yes yes --set changeps1 no
+    - conda config --set show_channel_urls True
+    - conda update conda
+    - ENV_NAME='test-environment'
+    - conda create -n $ENV_NAME python=$TRAVIS_PYTHON_VERSION
+    - source activate $ENV_NAME
+    # Customise the testing environment.
+    - conda config --add channels rsignell
+    - conda install runipy  # Run ipython-notebooks.
+    - conda install setuptools pip
+    - conda install cython lxml requests pytz jinja2 pillow
+    - conda install numpy scipy matplotlib pandas ipython-notebook
+    - conda install prettyplotlib netcdf4 geojson shapely pyshp owslib pyoos
+    - conda install biggus pyke cartopy iris
+    # Not found in conda.
+    - pip install SPARQLWrapper vincent rdflib pykml
+    - pip install git+https://github.com/birdage/folium.git@clustered_markers#egg=folium --upgrade
+    # Output debug info.
+    - conda info -a
+
+script:
+    - cd test &&  nosetests --verbose --nocapture
