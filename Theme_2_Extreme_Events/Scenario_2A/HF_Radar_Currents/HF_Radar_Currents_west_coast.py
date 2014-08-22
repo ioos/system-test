@@ -617,6 +617,14 @@ display(HTML(htmlContent))
 ## adds the HF radar tile layers
 map.add_tile_layer(tile_name='hfradar 6km',
                    tile_url='http://hfradar.ndbc.noaa.gov/tilesavg.php?s=10&e=100&x={x}&y={y}&z={z}&t=2014-8-21 17:00:00&rez=6')
+map.add_tile_layer(tile_name='hfradar 2km',
+                   tile_url='http://hfradar.ndbc.noaa.gov/tilesavg.php?s=10&e=100&x={x}&y={y}&z={z}&t=2014-8-21 17:00:00&rez=2')
+map.add_tile_layer(tile_name='hfradar 1km',
+                   tile_url='http://hfradar.ndbc.noaa.gov/tilesavg.php?s=10&e=100&x={x}&y={y}&z={z}&t=2014-8-21 17:00:00&rez=1')
+map.add_tile_layer(tile_name='hfradar 500m',
+                   tile_url='http://hfradar.ndbc.noaa.gov/tilesavg.php?s=10&e=100&x={x}&y={y}&z={z}&t=2014-8-21 17:00:00&rez=0.5')
+
+
 map.add_layers_to_map()
 
 inline_map(map)  
