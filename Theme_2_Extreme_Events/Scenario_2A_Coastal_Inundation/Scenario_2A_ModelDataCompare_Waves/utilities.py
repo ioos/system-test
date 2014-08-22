@@ -25,17 +25,6 @@ from owslib import fes
 from owslib.ows import ExceptionReport
 
 
-name_list = ['water level',
-             'sea_surface_height',
-             'sea_surface_elevation',
-             'sea_surface_height_above_geoid',
-             'sea_surface_height_above_sea_level',
-             'water_surface_height_above_reference_datum',
-             'sea_surface_height_above_reference_ellipsoid']
-
-sos_name = 'water_surface_height_above_reference_datum'
-
-
 def fes_date_filter(start_date='1900-01-01', stop_date='2100-01-01',
               constraint='overlaps'):
     """Hopefully something like this will be implemented in fes soon."""
@@ -56,42 +45,46 @@ def fes_date_filter(start_date='1900-01-01', stop_date='2100-01-01',
     return start, stop
 
 
-def get_Coops_longName(station):
-    """Get longName for specific station from COOPS SOS using DescribeSensor
+def get_station_longName(station):
+    """Get longName for specific station using DescribeSensor
     request."""
-    url = ('http://opendap.co-ops.nos.noaa.gov/ioos-dif-sos/SOS?service=SOS&'
-           'request=DescribeSensor&version=1.0.0&'
-           'outputFormat=text/xml;subtype="sensorML/1.0.1"&'
-           'procedure=urn:ioos:station:NOAA.NOS.CO-OPS:%s') % station
-    tree = etree.parse(urlopen(url))
-    root = tree.getroot()
-    path = "//sml:identifier[@name='longName']/sml:Term/sml:value/text()"
-    namespaces = dict(sml="http://www.opengis.net/sensorML/1.0.1")
-    longName = root.xpath(path, namespaces=namespaces)
-    if len(longName) == 0:
-        longName = station
-    return longName[0]
 
-
-def coops2df(collector, coops_id, sos_name):
-    """Request CSV response from SOS and convert to Pandas DataFrames."""
-    collector.features = [coops_id]
-    collector.variables = [sos_name]
-    long_name = get_Coops_longName(coops_id)
-
+    url = ('http://sdf.ndbc.noaa.gov/sos/server.php?service=SOS&'
+           'request=DescribeSensor&version=1.0.0&outputFormat=text/xml;subtype="sensorML/1.0.1"&'
+           'procedure=urn:ioos:station:wmo:%s') % station
     try:
+	    tree = etree.parse(urlopen(url))
+	    root = tree.getroot()
+	    namespaces = {'sml': "http://www.opengis.net/sensorML/1.0.1"}
+	    longName = root.xpath("//sml:identifier[@name='longName']/sml:Term/sml:value/text()", namespaces=namespaces)
+	    if len(longName) == 0:
+	    	# Just return the station id
+	        return station
+	    else:
+	        return longName[0]
+    except Exception as e:
+	    warn(e)
+	    # Just return the station id
+	    return station
+
+
+def collector2df(collector, station, sos_name):
+    """Request CSV response from SOS and convert to Pandas DataFrames."""
+    collector.features = [station]
+    collector.variables = [sos_name]
+
+    
+    long_name = get_station_longName(station)
+    try:
+
         response = collector.raw(responseFormat="text/csv")
         data_df = read_csv(BytesIO(response.encode('utf-8')),
                            parse_dates=True,
                            index_col='date_time')
-        col = 'water_surface_height_above_reference_datum (m)'
-        if False:
-            data_df['Observed Data'] = (data_df[col] -
-                                        data_df['vertical_position (m)'])
-        data_df['Observed Data'] = data_df[col]
     except ExceptionReport as e:
-        warn("Station %s is not NAVD datum. %s" % (long_name, e))
-        data_df = DataFrame()  # Assing an empty DataFrame for now.
+        # warn("Station %s is not NAVD datum. %s" % (long_name, e))
+        print(str(e))
+        data_df = DataFrame()  # Assigning an empty DataFrame for now.
 
     data_df.name = long_name
     return data_df
@@ -175,16 +168,16 @@ def ind2ij(a, index):
     return i, j
 
 
-def get_coordinates(bounding_box, bounding_box_type):
+def get_coordinates(bounding_box, bounding_box_type=''):
     """Create bounding box coordinates for the map."""
     coordinates = []
-    if bounding_box_type is "box":
-        coordinates.append([bounding_box[0][1], bounding_box[0][0]])
-        coordinates.append([bounding_box[0][1], bounding_box[1][0]])
-        coordinates.append([bounding_box[1][1], bounding_box[1][0]])
-        coordinates.append([bounding_box[1][1], bounding_box[0][0]])
-        coordinates.append([bounding_box[0][1], bounding_box[0][0]])
-        return coordinates
+    if bounding_box_type == "box":
+        coordinates.append([bounding_box[1], bounding_box[0]])
+        coordinates.append([bounding_box[1], bounding_box[2]])
+        coordinates.append([bounding_box[3], bounding_box[2]])
+        coordinates.append([bounding_box[3], bounding_box[0]])
+        coordinates.append([bounding_box[1], bounding_box[0]])
+    return coordinates
 
 
 def inline_map(m):
