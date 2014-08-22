@@ -68,7 +68,7 @@ css_styles()
 
 # <markdowncell>
 
-# <div class="warning"><strong>Temporal Bounds</strong> - Anything longer than one year kills the CO-OPS service</div>
+# <div class="warning"><strong>Bounding Box</strong> - Small Bbox for San Francisco Bay (West)</div>
 
 # <codecell>
 
@@ -81,7 +81,7 @@ area = {'Hawaii': [-160.0, 18.0, -154., 23.0],
         'Puerto Rico': [-71, 14, -60, 24],
         'East Coast': [-77, 34, -70, 40],
         'North West': [-130, 38, -121, 50],
-        'West': [-132, 30, -105, 47]
+        'West': [-130, 36, -120, 40]
         }
 
 bounding_box = area['West']
@@ -447,7 +447,7 @@ def get_hr_radar_dap_data(dap_urls,st_list,jd_start,  jd_stop):
     df_list = []
     for url in dap_urls:         
         #only look at 6km hf radar
-        if 'http://hfrnet.ucsd.edu/thredds/dodsC/HFRNet/USWC/' in url and "6km" in url and "GNOME" in url:                                  
+        if 'http://hfrnet.ucsd.edu/thredds/dodsC/HFRNet/USWC/' in url and "2km" in url and "GNOME" in url:                                  
             print url
             #get url
             nc = netCDF4.Dataset(url, 'r')
@@ -511,11 +511,15 @@ def get_hr_radar_dap_data(dap_urls,st_list,jd_start,  jd_stop):
                             #converts m to cm
                             u_vals = (u_vals)*100.
                             v_vals = (v_vals)*100.
+                            "\tprint filled array"    
                     except:    
-                        pass
+                         if u_var.units == "m s-1":                                                    
+                            #converts m to cm
+                            u_vals = (u_vals)*100.
+                            v_vals = (v_vals)*100.
+                            "\tnot filled array"    
                                                             
                     print "units",u_var.units                         
-                    
 
                     #turn vectors in the speed and direction
                     ws = uv2ws(u_vals,v_vals) 
@@ -551,6 +555,11 @@ df_list = get_hr_radar_dap_data(dap_urls,st_list,jd_start,  jd_stop)
 
 # <codecell>
 
+## Stations we know contain all three data types of interest
+st_known =['urn:ioos:station:NOAA.NOS.CO-OPS:s09010','urn:ioos:station:NOAA.NOS.CO-OPS:s08010']
+
+# <codecell>
+
 for station_index in st_list.keys():
     df = st_list[station_index]['obsData']  
     if st_list[station_index]['hasObsData']:
@@ -572,6 +581,104 @@ for ent in df_list:
         plt.xlabel('Date', fontsize=18)
         plt.ylabel('sea_water_speed (cm/s)', fontsize=16)  
         ent['valid'] = True     
+
+# <markdowncell>
+
+# Model data is not in the NGDC catalog
+
+# <codecell>
+
+# multiple files for time step, were only looking at nowcast(past) values
+# times are 3z,9z,15z,21z
+def buildSFOUrls(jd_start,  jd_stop):
+    url_list = []
+    time_list = ['03z','09z','15z','21z']
+    delta = jd_stop-jd_start
+    for i in range((delta.days)+1):
+        model_file_date = jd_start + dt.timedelta(days=i)
+        base_url = 'http://opendap.co-ops.nos.noaa.gov/thredds/dodsC/NOAA/SFBOFS/MODELS/'
+
+        val_month = ''
+        val_year = ''
+        val_day = ''
+        #month
+        if model_file_date.month <10:
+            val_month = "0"+str(model_file_date.month)
+        else:    
+            val_month = str(model_file_date.month)
+        #year
+        val_year = str(model_file_date.year) 
+        #day
+        if model_file_date.day <10:
+             val_day = "0"+str(model_file_date.day)
+        else:    
+            val_day = str(model_file_date.day)
+        
+        file_name = '/nos.sfbofs.stations.nowcast.'+val_year+val_month+val_day
+        for t in time_list:
+            t_val = '.t'+t+'.nc'
+            url_list.append(base_url +val_year+val_month+ file_name + t_val)
+    return url_list
+    
+
+# <codecell>
+
+def findSFOIndexs(lats,lons,lat_lon_list):   
+    index_list = []
+    dist_list = []
+    for val in lat_lon_list:
+        point1 = Point(val[1],val[0])
+        dist = 999999999
+        index = -1  
+        for i in range(0,len(lats)):       
+            point2 = Point(lons[i], lats[i])
+            val = point1.distance(point2)
+            if val < dist:
+                index = i
+                dist = val   
+        index_list.append(index)
+        dist_list.append(dist)
+    return index_list,dist_list
+
+# <codecell>
+
+def extractSFOModelData(lat_lon_list):
+    urls = buildSFOUrls(jd_start,  jd_stop)
+    index = -1
+    for i, url in enumerate(urls):
+        nc = netCDF4.Dataset(url, 'r')   
+        if i == 0:
+            lats = nc.variables['lat'][:]
+            lons = nc.variables['lon'][:]
+            lons = lons-360
+            index_list,dist_list = findSFOIndexs(lats,lons,lat_lon_list)
+        #Extract the model data using and MF dataset
+        
+        u_var = nc.variables['u'][:,0,index_list] 
+        v_var = nc.variables['v'][:,0,index_list] 
+        break
+    '''
+    #convert to +- decimal degress
+    lon=lon-360    
+    u_var = nc.variables['u'][:] 
+    v_var = nc.variables['v'][:]
+    
+    u_var=u_var*100.
+    v_var=v_var*100
+    
+    ws = uv2ws(u_vals,v_vals) 
+    wd = uv2wd(u_vals,v_vals) 
+    '''
+
+# <codecell>
+
+lat_lon_list = []
+for st in st_list:
+    if st in st_known:
+        lat = st_list[st]['lat']
+        lon = st_list[st]['lon']    
+        lat_lon_list.append([lat,lon])
+extractSFOModelData(lat_lon_list)
 
 # <codecell>
 
@@ -615,15 +722,10 @@ for ent in df_list:
 display(HTML(htmlContent))
 
 ## adds the HF radar tile layers
-map.add_tile_layer(tile_name='hfradar 6km',
-                   tile_url='http://hfradar.ndbc.noaa.gov/tilesavg.php?s=10&e=100&x={x}&y={y}&z={z}&t=2014-8-21 17:00:00&rez=6')
-map.add_tile_layer(tile_name='hfradar 2km',
-                   tile_url='http://hfradar.ndbc.noaa.gov/tilesavg.php?s=10&e=100&x={x}&y={y}&z={z}&t=2014-8-21 17:00:00&rez=2')
-map.add_tile_layer(tile_name='hfradar 1km',
-                   tile_url='http://hfradar.ndbc.noaa.gov/tilesavg.php?s=10&e=100&x={x}&y={y}&z={z}&t=2014-8-21 17:00:00&rez=1')
-map.add_tile_layer(tile_name='hfradar 500m',
-                   tile_url='http://hfradar.ndbc.noaa.gov/tilesavg.php?s=10&e=100&x={x}&y={y}&z={z}&t=2014-8-21 17:00:00&rez=0.5')
+jd_now = dt.datetime.utcnow()
 
+map.add_tile_layer(tile_name='hfradar 2km',
+                   tile_url='http://hfradar.ndbc.noaa.gov/tilesavg.php?s=10&e=100&x={x}&y={y}&z={z}&t='+str(jd_now.year)+'-'+str(jd_now.month)+'-'+str(jd_now.day)+' '+str(jd_now.hour-1)+':00:00&rez=2')
 
 map.add_layers_to_map()
 
@@ -631,6 +733,7 @@ inline_map(map)
 
 # <codecell>
 
+print lat_lon_list
 
 # <codecell>
 
