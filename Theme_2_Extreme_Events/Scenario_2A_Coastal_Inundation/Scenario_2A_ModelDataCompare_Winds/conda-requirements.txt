@@ -1,0 +1,10 @@
+pandas
+numpy
+matplotlib
+OWSLib
+lxml
+pyoos
+cython
+pyshp
+Pillow
+pyke
