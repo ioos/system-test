@@ -40,7 +40,7 @@ import pandas as pd
 from pyoos.collectors.coops.coops_sos import CoopsSos
 import requests
 
-from utilities import (date_range, coops2df, find_timevar, find_ij, nearxy, service_urls, mod_df, 
+from utilities import (fes_date_filter, coops2df, find_timevar, find_ij, nearxy, service_urls, mod_df, 
                        get_coordinates, inline_map, get_Coops_longName, css_styles)
 css_styles()
 
@@ -85,7 +85,7 @@ print start_date,'to',stop_date
 data_dict = {}
 sos_name = 'Winds'
 data_dict['winds'] = {
- "u_names":['eastward_wind', 'u-component_of_wind', 'u-component_of_wind_height_above_ground', 'ugrd10m', 'wind'], 
+ "u_names":['eastward_wind', 'u-component_of_wind', 'u_component_of_wind', 'u_component_of_wind_height_above_ground', 'u-component_of_wind_height_above_ground', 'ugrd10m', 'wind'], 
  "v_names":['northward_wind', 'v-component_of_wind', 'v-component_of_wind_height_above_ground', 'vgrd10m', 'wind'],
  "sos_name":['winds']}  
 
@@ -134,14 +134,15 @@ for endpoint in bbox_endpoints:
     csw = CatalogueServiceWeb(endpoint,timeout=60)
 
     # convert User Input into FES filters
-    start,stop = date_range(start_date,stop_date)
+    start,stop = fes_date_filter(start_date,stop_date)
     bbox = fes.BBox(bounding_box)
 
     #use the search name to create search filter
-    or_filt = fes.Or([fes.PropertyIsLike(propertyname='apiso:AnyText',literal=('*%s*' % val),
+    or_filt = fes.Or([fes.PropertyIsLike(propertyname='apiso:AnyText',literal='*%s*' % val,
                         escapeChar='\\',wildCard='*',singleChar='?') for val in data_dict['winds']['u_names']])
 
     filter_list = [fes.And([ bbox, start, stop, or_filt]) ]
+#     filter_list = [fes.And([ bbox, or_filt]) ]
     # connect to CSW, explore it's properties
     # try request using multiple filters "and" syntax: [[filter1,filter2]]
     try:
@@ -167,7 +168,7 @@ endpoint = 'http://www.ngdc.noaa.gov/geoportal/csw' # NGDC Geoportal
 csw = CatalogueServiceWeb(endpoint,timeout=60)
 
 # convert User Input into FES filters
-start,stop = date_range(start_date,stop_date)
+start,stop = fes_date_filter(start_date,stop_date)
 bbox = fes.BBox(bounding_box)
 
 #use the search name to create search filter
@@ -490,14 +491,18 @@ inline_map(m)
 
 for n in range(len(obs_df)):
     # First plot the model data
-    ax = model_df[n].plot(figsize=(14, 6), title=model_df[n].name, legend=False)
-    plt.setp(ax.lines[0], linewidth=3, color='0.7', zorder=1)
-    ax.legend()
+    if not model_df[n].empty and not obs_df[n].empty:
+        ax = model_df[n].plot(figsize=(14, 6), title=model_df[n].name, legend=False)
+        plt.setp(ax.lines[0], linewidth=3, color='0.7', zorder=1)
+        ax.legend()
 
-    # Overlay the obs data (resample to hourly instead of 6 mins!)
-    ax = obs_df[n]['wind_speed (m/s)'].resample('H', how='mean').plot(title=obs_df[n].name, legend=False, color='b')
-    plt.setp(ax.lines[1], linewidth=1.0, zorder=1)
-    ax.legend()
-    ax.set_ylabel('Wind Speed (m/s)')
-    plt.show()
+        # Overlay the obs data (resample to hourly instead of 6 mins!)
+        ax = obs_df[n]['wind_speed (m/s)'].resample('H', how='mean').plot(title=obs_df[n].name, legend=False, color='b')
+        plt.setp(ax.lines[1], linewidth=1.0, zorder=1)
+        ax.legend()
+        ax.set_ylabel('Wind Speed (m/s)')
+        plt.show()
+
+# <codecell>
+
 
