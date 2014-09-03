@@ -202,6 +202,10 @@ for endpoint in endpoints:
 
 # <markdowncell>
 
+# <div class="error"> Some servers have a maximum amount of records you can retrieve at once. See: https://github.com/ioos/system-test/issues/126</div>
+
+# <markdowncell>
+
 # #### Let's plot the results in a bar graph
 
 # <codecell>
