@@ -40,13 +40,18 @@ def fes_date_filter(start_date='1900-01-01', stop_date='2100-01-01',
     return start, stop
 
 
-def get_station_longName(station):
+def get_station_longName(station, provider):
     """Get longName for specific station using DescribeSensor
     request."""
-
-    url = ('http://sdf.ndbc.noaa.gov/sos/server.php?service=SOS&'
-           'request=DescribeSensor&version=1.0.0&outputFormat=text/xml;subtype="sensorML/1.0.1"&'
-           'procedure=urn:ioos:station:wmo:%s') % station
+    if provider.upper() == 'NDBC':
+        url = ('http://sdf.ndbc.noaa.gov/sos/server.php?service=SOS&'
+               'request=DescribeSensor&version=1.0.0&outputFormat=text/xml;subtype="sensorML/1.0.1"&'
+               'procedure=urn:ioos:station:wmo:%s') % station
+    elif provider.upper() == 'COOPS':
+        url = ('http://opendap.co-ops.nos.noaa.gov/ioos-dif-sos/SOS?service=SOS&'
+           'request=DescribeSensor&version=1.0.0&'
+           'outputFormat=text/xml;subtype="sensorML/1.0.1"&'
+           'procedure=urn:ioos:station:NOAA.NOS.CO-OPS:%s') % station
     try:
 	    tree = etree.parse(urlopen(url))
 	    root = tree.getroot()
@@ -63,19 +68,20 @@ def get_station_longName(station):
 	    return station
 
 
-def collector2df(collector, station, sos_name):
+def collector2df(collector, station, sos_name, provider='COOPS'):
     """Request CSV response from SOS and convert to Pandas DataFrames."""
     collector.features = [station]
     collector.variables = [sos_name]
-
     
-    long_name = get_station_longName(station)
+    long_name = get_station_longName(station, provider)
     try:
 
         response = collector.raw(responseFormat="text/csv")
         data_df = read_csv(BytesIO(response.encode('utf-8')),
                            parse_dates=True,
                            index_col='date_time')
+        col = 'sea_water_temperature (C)'
+        data_df['Observed Data'] = data_df[col]
     except ExceptionReport as e:
         # warn("Station %s is not NAVD datum. %s" % (long_name, e))
         print(str(e))
@@ -107,7 +113,7 @@ def mod_df(arr, timevar, istart, istop, mod_name, ts):
     b = b[np.isfinite(b[mod_name])]
     # Interpolate onto uniform time base, fill gaps up to:
     # (10 values @ 6 min = 1 hour).
-    c = concat([b, ts], axis=1).interpolate(limit=10)
+    c = concat([b, ts], axis=1)
     return c
 
 

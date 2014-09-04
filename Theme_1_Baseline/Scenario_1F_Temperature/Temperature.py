@@ -3,20 +3,20 @@
 
 # <markdowncell>
 
-# ># IOOS System Test: [Baseline Assessment Theme:](https://github.com/ioos/system-test/wiki/Development-of-Test-Themes) Temperature
+# ># IOOS System Test: [Baseline Assessment Theme:](https://github.com/ioos/system-test/wiki/Development-of-Test-Themes) Water Temperature
 
 # <markdowncell>
 
 # ### Can we find high resolution water temperature data? 
 # 
-# ### Questions
-# 1. Can we discover, access, and overlay temperature information in sensors oe satellite (obs)?
-# 2. Can we discover, access, and overlay temperature information from models?
-# 3. Can we compare obs and model data?
-# 3. Is data high enough resolution (spatial and temporal) to support recreational activities?
-# 4. Can we see effects of upwelling/downwelling in the temperature data?
+# #### Questions
+# 1. Is it possible to discover and access water temperature information in sensors or satellite (obs)?
+# 2. Is it possible to discover and access water temperature information from models?
+# 3. Can obs and model data be compared?
+# 4. Is data high enough resolution (spatial and temporal) to support recreational activities?
+# 5. Can we see effects of upwelling/downwelling in the temperature data?
 # 
-# Methodology:
+# #### Methodology
 # * Define temporal and spatial bounds of interest, as well as parameters of interest
 # * Search for available service endpoints in the NGDC CSW catalog meeting search criteria
 # * Extract OPeNDAP data endpoints from model datasets and SOS endpoints from observational datasets
@@ -44,7 +44,7 @@ import matplotlib.pyplot as plt
 from owslib.csw import CatalogueServiceWeb
 from owslib import fes
 import pandas as pd
-from pyoos.collectors.ndbc.ndbc_sos import NdbcSos
+from pyoos.collectors.coops.coops_sos import CoopsSos
 import requests
 
 from utilities import (fes_date_filter, collector2df, find_timevar, find_ij, nearxy, service_urls, mod_df, 
@@ -60,7 +60,7 @@ bounding_box_type = "box"
 
 # Bounding Box [lon_min, lat_min, lon_max, lat_max]
 area = {'Hawaii': [-160.0, 18.0, -154., 23.0],
-        'Gulf of Maine': [-72.0, 41.0, -69.0, 43.0],
+        'Gulf of Maine': [-72.0, 41.5, -67.0, 46.0],
         'New York harbor region': [-75., 39., -71., 41.5],
         'Puerto Rico': [-75, 12, -55, 26],
         'East Coast': [-77, 34, -70, 40],
@@ -68,13 +68,13 @@ area = {'Hawaii': [-160.0, 18.0, -154., 23.0],
         'Gulf of Mexico': [-92, 28, -84, 31],
         'Arctic': [-179, 63, -140, 80],
         'North East': [-74, 40, -69, 42],
-        'Virginia Beach': [-76, 34, -74, 38]}
+        'Virginia Beach': [-78, 33, -74, 38]}
 
-bounding_box = area['Virginia Beach']
+bounding_box = area['Gulf of Maine']
 
-#temporal range - last 28 days and next 2 days (forecast data)
+#temporal range - last 7 days and next 2 days (forecast data)
 jd_now = dt.datetime.utcnow()
-jd_start,  jd_stop = jd_now - dt.timedelta(days=28), jd_now + dt.timedelta(days=2)
+jd_start,  jd_stop = jd_now - dt.timedelta(days=7), jd_now + dt.timedelta(days=2)
 
 start_date = jd_start.strftime('%Y-%m-%d %H:00')
 end_date = jd_stop.strftime('%Y-%m-%d %H:00')
@@ -91,9 +91,14 @@ print start_date,'to',end_date
 # put the names in a dict for ease of access 
 data_dict = {}
 sos_name = 'sea_water_temperature'
-data_dict["temp"] = {"names":['sea_water_temperature',
+data_dict["temp"] = {"names": ['sea_water_temperature',
                                'water_temperature',
-                               '*sea_water_temperature'], 
+                               'sea_water_potential_temperature',
+                               'water temperature',
+                               '*sea_water_temperature',
+                               'Sea-Surface Temperature',
+                               'sea_surface_temperature',
+                               'SST'], 
                       "sos_name":["sea_water_temperature"]}  
 
 # <headingcell level=3>
@@ -134,7 +139,6 @@ dap_urls = service_urls(csw.records)
 #remove duplicates and organize
 dap_urls = sorted(set(dap_urls))
 print "Total DAP:",len(dap_urls)
-#print the first 5...
 print "\n".join(dap_urls[0:5])
 
 # <markdowncell>
@@ -161,8 +165,8 @@ end_time = dt.datetime.strptime(end_date,'%Y-%m-%d %H:%M')
 iso_start = start_time.strftime('%Y-%m-%dT%H:%M:%SZ')
 iso_end = end_time.strftime('%Y-%m-%dT%H:%M:%SZ')
 
-# Define the SOS collector
-collector = NdbcSos()
+# Define the Coops collector
+collector = CoopsSos()
 print collector.server.identification.title
 collector.variables = data_dict["temp"]["sos_name"]
 collector.server.identification.title
@@ -206,14 +210,15 @@ obs_df = []
 
 for sta in stations:
     raw_df = collector2df(collector, sta, sos_name)
-    obs_df.append(pd.DataFrame(pd.concat([raw_df, ts],axis=1)))
+#     col = 'Observed Data'
+#     obs_df.append(pd.DataFrame(pd.concat([raw_df, ts],axis=1)))[col]
+#     obs_df[-1].name = raw_df.name
+    
+    col = 'Observed Data'
+    concatenated = pd.concat([raw_df, ts], axis=1)[col]
+    obs_df.append(pd.DataFrame(concatenated))
     obs_df[-1].name = raw_df.name
-#     if raw_df.empty:
-#         Hs_obs_df.append(pd.DataFrame())
-#     else:
-#         Hs_obs_df.append(pd.DataFrame(pd.concat([raw_df, ts],axis=1)['sea_water_temperature (C)']))
-
-#     Hs_obs_df[-1].name = raw_df.name
+    
     
 
 # <markdowncell>
@@ -256,7 +261,7 @@ inline_map(m)
 for df in obs_df:
     if len(df) > min_data_pts:
         fig, axes = plt.subplots(figsize=(20,5))
-        df['sea_water_temperature (C)'].plot(ax=axes, color='r')
+        df['Observed Data'].plot()
         axes.set_title(df.name)
         axes.set_ylabel('Temperature (C)')
 
@@ -267,24 +272,29 @@ for df in obs_df:
 
 # <codecell>
 
-name_in_list = lambda cube: cube.standard_name in data_dict['waves']['names']
+name_in_list = lambda cube: cube.standard_name in data_dict['temp']['names']
 constraint = iris.Constraint(cube_func=name_in_list)
 
 # <codecell>
 
-# Use only data within 0.04 degrees (about 4 km).
-max_dist = 0.04
+# Create list of model DataFrames for each station
+model_df = []
+for df in obs_df:
+    model_df.append(pd.DataFrame(index=ts.index))
+    model_df[-1].name = df.name
+
+# Use only data within 0.06 degrees 
+max_dist = 0.06
+
 # Use only data where the standard deviation of the time series exceeds 0.01 m (1 cm).
 # This eliminates flat line model time series that come from land points that should have had missing values.
 min_var = 0.01
 for url in dap_urls:
-    if 'cdip' in url:
-        # The CDIP buoys are known to be observed data, so let's just skip
-        continue
     try:
+        print url
         a = iris.load_cube(url, constraint)
-        # take first 20 chars for model name
-        mod_name = a.attributes['title'][0:20]
+        # take first 30 chars for model name
+        mod_name = a.attributes['title'][0:30]
         r = a.shape
         timevar = find_timevar(a)
         lat = a.coord(axis='Y').points
@@ -298,8 +308,31 @@ for url in dap_urls:
         # Only proceed if we have data in the range requested.
         if istart != istop:
             nsta = len(stations)
-            if len(r) == 3:
-                print('[Structured grid model]:', url)
+            if len(r) == 4:
+                # Dimensions are time, height, lat, lon
+                d = a[0, 0:1, :, :].data
+                # Find the closest non-land point from a structured grid model.
+                if len(lon.shape) == 1:
+                    lon, lat = np.meshgrid(lon, lat)
+                j, i, dd = find_ij(lon, lat, d, obs_lon, obs_lat)
+
+                for n in range(nsta):
+                    # Only use if model cell is within max_dist of station
+                    if dd[n] <= max_dist:
+                        arr = a[istart:istop, 0:1, j[n], i[n]].data
+                        if arr.std() >= min_var:
+                            c = mod_df(arr, timevar, istart, istop,
+                                       mod_name, ts)
+                            name = obs_df[n].name
+                            model_df[n] = pd.concat([model_df[n], c], axis=1)
+                            model_df[n].name = name
+                            
+                        else:
+                            print 'min_var error'
+                    else:
+                        print 'Max dist error'
+            elif len(r) == 3:
+#                 print('[Structured grid model]:', url)
                 d = a[0, :, :].data
                 # Find the closest non-land point from a structured grid model.
                 if len(lon.shape) == 1:
@@ -313,11 +346,11 @@ for url in dap_urls:
                         if arr.std() >= min_var:
                             c = mod_df(arr, timevar, istart, istop,
                                        mod_name, ts)
-                            name = Hs_obs_df[n].name
-                            Hs_obs_df[n] = pd.concat([Hs_obs_df[n], c], axis=1)
-                            Hs_obs_df[n].name = name
+                            name = obs_df[n].name
+                            model_df[n] = pd.concat([model_df[n], c], axis=1)
+                            model_df[n].name = name
             elif len(r) == 2:
-                print('[Unstructured grid model]:', url)
+#                 print('[Unstructured grid model]:', url)
                 # Find the closest point from an unstructured grid model.
                 index, dd = nearxy(lon.flatten(), lat.flatten(),
                                    obs_lon, obs_lat)
@@ -329,9 +362,9 @@ for url in dap_urls:
                         if arr.std() >= min_var:
                             c = mod_df(arr, timevar, istart, istop,
                                        mod_name, ts)
-                            name = Hs_obs_df[n].name
-                            Hs_obs_df[n] = pd.concat([Hs_obs_df[n], c], axis=1)
-                            Hs_obs_df[n].name = name
+                            name = obs_df[n].name
+                            model_df[n] = pd.concat([model_df[n], c], axis=1)
+                            model_df[n].name = name
             elif len(r) == 1:
                 print('[Data]:', url)
     except (ValueError, RuntimeError, CoordinateNotFoundError,
@@ -341,15 +374,33 @@ for url in dap_urls:
 
 # <markdowncell>
 
-# ### Plot Modeled vs Obs Wave Height
+# ### Plot Modeled vs Obs Water Temperature
 
 # <codecell>
 
-for df in Hs_obs_df:
-    # Make sure there is obs data at the station for comparison
-    if 'sea_surface_wave_significant_height (m)' in df.columns:
-        ax = df.plot(figsize=(14, 6), title=df.name, legend=False)
-        plt.setp(ax.lines[0], linewidth=4.0, color='0.7', zorder=1, marker='.')
-        ax.legend()
-        ax.set_ylabel('m')
+count = 0
+for df in obs_df:
+    if not model_df[count].empty and not df.empty:
+        fig, ax = plt.subplots(figsize=(20,5))
+        
+        # Plot the model data
+        model_df[count].plot(ax=ax, title=model_df[count].name)
+        
+        # Overlay the obs data (resample to hourly instead of 6 mins!)
+        df['Observed Data'].resample('H', how='mean').plot(ax=ax, title=df.name, color='k', linewidth=2)
+        ax.set_ylabel('Sea Water Temperature (C)')
+        ax.legend(loc='right')
+        plt.show()
+
+    count += 1
+
+# <markdowncell>
+
+# ### Conclusions
+# 
+# 1. Observed water temperature data can be obtained through CO-OPS stations
+# 2. It is possible to obtain modeled forecast water temperature data, just not in all locations.
+# 3. It was not possible to compare the obs and model data because the model data was only available as a forecast.
+# 4. The observed data was available in high resolution (6 mins), making it useful to support recreational activities like surfing.
+# 5. When combined with wind direction and speed, it may be possible to see the effects of upwelling/downwelling on water temperature.
 

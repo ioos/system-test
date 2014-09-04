@@ -16,11 +16,14 @@
     ```bash
     conda install --file conda-requirements.txt
     conda install -c https://conda.binstar.org/rsignell iris
+    conda install -c https://conda.binstar.org/rsignell pyoos
     ```
     If you are using environments within conda, be sure to specify it
     ```bash
     conda install -n yourenvname --file conda-requirements.txt
     conda install -n yourenvname -c https://conda.binstar.org/rsignell iris
+    conda install -n yourenvname -c https://conda.binstar.org/rsignell pyoos
+
     ```
     
     You will still have to pip install folium
