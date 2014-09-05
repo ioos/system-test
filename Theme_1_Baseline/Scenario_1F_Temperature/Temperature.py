@@ -15,6 +15,7 @@
 # 3. Can obs and model data be compared?
 # 4. Is data high enough resolution (spatial and temporal) to support recreational activities?
 # 5. Can we see effects of upwelling/downwelling in the temperature data?
+# 6. What can we say about the spatial resolution of the data? Is that high enough that we can provide better resolution than the obs data to recreational users? 
 # 
 # #### Methodology
 # * Define temporal and spatial bounds of interest, as well as parameters of interest
@@ -23,8 +24,8 @@
 # * Obtain observation data sets from stations within the spatial boundaries
 # * Plot observation stations on a map (red marker if not enough data)
 # * Using DAP (model) endpoints find all available models data sets that fall in the area of interest, for the specified time range, and extract a model grid cell closest to all the given station locations
-# * Plot modelled and observed time series temperature data on same axes for comparison
-# 
+# * Plot modelled and observed time series temperature data on same axes for comparison.
+# * Plot the model grid points and observation stations on the same map to show the spatial resolution
 
 # <headingcell level=4>
 
@@ -48,7 +49,9 @@ from pyoos.collectors.coops.coops_sos import CoopsSos
 import requests
 
 from utilities import (fes_date_filter, collector2df, find_timevar, find_ij, nearxy, service_urls, mod_df, 
-                       get_coordinates, get_station_longName, inline_map)
+                       get_coordinates, get_station_longName, inline_map, css_styles)
+
+css_styles()
 
 # <headingcell level=4>
 
@@ -123,8 +126,21 @@ or_filt = fes.Or([fes.PropertyIsLike(propertyname='apiso:AnyText',
                                      wildCard='*',
                                      singleChar='?') for val in data_dict["temp"]["names"]])
 
+# <markdowncell>
+
+# <div class="warning"><strong>ROMS model output often has Averages and History files. </strong> The Averages files are usually averaged over a tidal cycle or more, while the History files are snapshots at that time instant.  We are not interested in averaged data for this test, so in the cell below we remove any Averages files here by removing any datasets that have the term "Averages" in the metadata text.  A better approach would be to look at the `cell_methods` attributes propagated through to some term in the ISO metadata, but this is not implemented yet, as far as I know </div>
+
+# <codecell>
+
+val = 'Averages'
+not_filt = fes.Not([fes.PropertyIsLike(propertyname='apiso:AnyText',
+                                       literal=('*%s*' % val),
+                                       escapeChar='\\',
+                                       wildCard='*',
+                                       singleChar='?')])
+
 # try request using multiple filters "and" syntax: [[filter1,filter2]]
-filter_list = [fes.And([ bbox, start, stop, or_filt]) ]
+filter_list = [fes.And([ bbox, start, stop, or_filt, not_filt]) ]
 
 csw.getrecords2(constraints=filter_list,maxrecords=1000,esn='full')
 print str(len(csw.records)) + " csw records found"
@@ -139,7 +155,7 @@ dap_urls = service_urls(csw.records)
 #remove duplicates and organize
 dap_urls = sorted(set(dap_urls))
 print "Total DAP:",len(dap_urls)
-print "\n".join(dap_urls[0:5])
+print "\n".join(dap_urls[0:10])
 
 # <markdowncell>
 
@@ -152,7 +168,7 @@ sos_urls = service_urls(csw.records,service='sos:url')
 sos_urls = sorted(set(sos_urls))
 
 print "Total SOS:",len(sos_urls)
-print "\n".join(sos_urls)
+print "\n".join(sos_urls[0:10])
 
 # <markdowncell>
 
@@ -210,9 +226,6 @@ obs_df = []
 
 for sta in stations:
     raw_df = collector2df(collector, sta, sos_name)
-#     col = 'Observed Data'
-#     obs_df.append(pd.DataFrame(pd.concat([raw_df, ts],axis=1)))[col]
-#     obs_df[-1].name = raw_df.name
     
     col = 'Observed Data'
     concatenated = pd.concat([raw_df, ts], axis=1)[col]
@@ -289,7 +302,10 @@ max_dist = 0.06
 # Use only data where the standard deviation of the time series exceeds 0.01 m (1 cm).
 # This eliminates flat line model time series that come from land points that should have had missing values.
 min_var = 0.01
+
 for url in dap_urls:
+    if 'SOS' in url:
+        continue
     try:
         print url
         a = iris.load_cube(url, constraint)
@@ -309,6 +325,7 @@ for url in dap_urls:
         if istart != istop:
             nsta = len(stations)
             if len(r) == 4:
+                print url
                 # Dimensions are time, height, lat, lon
                 d = a[0, 0:1, :, :].data
                 # Find the closest non-land point from a structured grid model.
@@ -384,10 +401,10 @@ for df in obs_df:
         fig, ax = plt.subplots(figsize=(20,5))
         
         # Plot the model data
-        model_df[count].plot(ax=ax, title=model_df[count].name)
+        model_df[count].plot(ax=ax, title=model_df[count].name, legend=True)
         
         # Overlay the obs data (resample to hourly instead of 6 mins!)
-        df['Observed Data'].resample('H', how='mean').plot(ax=ax, title=df.name, color='k', linewidth=2)
+        df['Observed Data'].resample('H', how='mean').plot(ax=ax, title=df.name, color='k', linewidth=2, legend=True)
         ax.set_ylabel('Sea Water Temperature (C)')
         ax.legend(loc='right')
         plt.show()
@@ -396,11 +413,58 @@ for df in obs_df:
 
 # <markdowncell>
 
+# ### Let's look at the spatial resolution of the obs and model data
+# 
+# #### Let's just look at one model, COAWST Forecast System : USGS : US East Coast
+
+# <codecell>
+
+m = folium.Map(location=[lat_center, lon_center], zoom_start=6)
+
+url = 'http://geoport.whoi.edu/thredds/dodsC/coawst_4/use/fmrc/coawst_4_use_best.ncd'
+nc_ds = netCDF4.Dataset(url)
+# print nc_ds.variables
+time  = nc_ds.variables['time']
+lat  = nc_ds.variables['lat_rho'][:]
+lon  = nc_ds.variables['lon_rho'][:]
+
+# Now flatten the lat lon arrays to 1-D
+flat_lat = [x for sublist in lat for x in sublist]
+flat_lon = [x for sublist in lon for x in sublist]
+nc_ds.close()
+
+for lat, lon in zip(flat_lat, flat_lon):
+    if (lon > bounding_box[0] and lon < bounding_box[2]) and (lat > bounding_box[1] and lat < bounding_box[3]):
+        m.circle_marker([lat, lon]) #popup=str(lat)+','+str(lon))
+
+# Now overlay the obs stattions                
+n = 0
+for df in obs_df:
+    #get the station data from the sos end point
+    longname = df.name
+    lat = obs_loc_df['latitude (degree)'][n]
+    lon = obs_loc_df['longitude (degree)'][n]
+    popup_string = ('<b>Station:</b><br>'+ longname)
+    if len(df) > min_data_pts:
+        m.simple_marker([lat, lon], popup=popup_string)
+    else:
+        #popup_string += '<br>No Data Available'
+        popup_string += '<br>Not enough data available<br>requested pts: ' + str(min_data_pts ) + '<br>Available pts: ' + str(len(Hs_obs_df[n]))
+        m.circle_marker([lat, lon], popup=popup_string, fill_color='#ff0000', radius=10000, line_color='#ff0000')
+    n += 1
+    
+m.line(get_coordinates(bounding_box,bounding_box_type), line_color='#FF0000', line_weight=5)
+
+inline_map(m)
+
+# <markdowncell>
+
 # ### Conclusions
 # 
 # 1. Observed water temperature data can be obtained through CO-OPS stations
 # 2. It is possible to obtain modeled forecast water temperature data, just not in all locations.
-# 3. It was not possible to compare the obs and model data because the model data was only available as a forecast.
-# 4. The observed data was available in high resolution (6 mins), making it useful to support recreational activities like surfing.
+# 3. It is possible to compare the obs and model data by downsampling the observed data.
+# 4. The observed data is available in high resolution (6 mins), making it useful to support recreational activities like surfing.
 # 5. When combined with wind direction and speed, it may be possible to see the effects of upwelling/downwelling on water temperature.
+# 6. The model definitely has better spatial resolution than the observation stations
 
