@@ -140,24 +140,6 @@ plt.plot(df.index, df[titles[1]])
 fig.suptitle(titles[1], fontsize=14)
 plt.xlabel('Date', fontsize=14)
 plt.ylabel(titles[1]+' m', fontsize=14)  
-'''
-print len(df[titles[1]])
-
-# First plot the model data
-ax = df.plot(figsize=(14, 6), title=titles[1], legend=False)
-plt.setp(ax.lines[0], linewidth=3, color='0.7', zorder=1)
-ax.legend()
-
-# Overlay the obs data (resample to hourly instead of 6 mins!)
-try:
-    ax = df[titles[1]].resample('1Min', how='mean').plot(title=df[titles[1]], legend=False, color='b')
-except:
-    pass
-
-d = df[titles[1]].resample('1Min', how='mean')
-print len(d)
-'''
-print ""
 
 # <codecell>
 
@@ -198,4 +180,9 @@ inline_map(map)
 
 # <codecell>
 
+
+# <codecell>
+
+import json
+json.dump(full_data, open("full_data.json",'w'),indent=4)
 
