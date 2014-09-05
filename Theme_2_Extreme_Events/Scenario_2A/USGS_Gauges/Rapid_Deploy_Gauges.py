@@ -183,6 +183,7 @@ inline_map(map)
 
 # <codecell>
 
-import json
-json.dump(full_data, open("full_data.json",'w'),indent=4)
+
+# <codecell>
+
 
