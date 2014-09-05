@@ -33,12 +33,14 @@
 # <codecell>
 
 import datetime as dt
+import numpy as np
 from warnings import warn
 from io import BytesIO
 import folium
 import netCDF4
 from IPython.display import HTML
 import iris
+iris.FUTURE.netcdf_promote = True
 from iris.exceptions import CoordinateNotFoundError, ConstraintMismatchError
 import matplotlib.pyplot as plt
 from owslib.csw import CatalogueServiceWeb
@@ -46,9 +48,18 @@ from owslib import fes
 import pandas as pd
 from pyoos.collectors.coops.coops_sos import CoopsSos
 import requests
+from operator import itemgetter
 
 from utilities import (fes_date_filter, collector2df, find_timevar, find_ij, nearxy, service_urls, mod_df, 
                        get_coordinates, get_station_longName, inline_map)
+
+# <headingcell level=4>
+
+# don't assume that the notebook server was started in pylab mode
+
+# <codecell>
+
+%matplotlib inline
 
 # <headingcell level=4>
 
@@ -95,6 +106,7 @@ data_dict["temp"] = {"names": ['sea_water_temperature',
                                'water_temperature',
                                'sea_water_potential_temperature',
                                'water temperature',
+                               'potential temperature',
                                '*sea_water_temperature',
                                'Sea-Surface Temperature',
                                'sea_surface_temperature',
@@ -156,7 +168,7 @@ print "\n".join(sos_urls)
 
 # <markdowncell>
 
-# ###Get most recent observations from all stations in bounding box
+# ###Get most recent observations from NOAA-COOPS stations in bounding box
 
 # <codecell>
 
@@ -283,8 +295,8 @@ for df in obs_df:
     model_df.append(pd.DataFrame(index=ts.index))
     model_df[-1].name = df.name
 
-# Use only data within 0.06 degrees 
-max_dist = 0.06
+# Use only data within 0.10 degrees (about 10 km)
+max_dist = 0.10
 
 # Use only data where the standard deviation of the time series exceeds 0.01 m (1 cm).
 # This eliminates flat line model time series that come from land points that should have had missing values.
@@ -299,6 +311,7 @@ for url in dap_urls:
         timevar = find_timevar(a)
         lat = a.coord(axis='Y').points
         lon = a.coord(axis='X').points
+
         jd = timevar.units.num2date(timevar.points)
         start = timevar.units.date2num(jd_start)
         istart = timevar.nearest_neighbour_index(start)
@@ -308,32 +321,12 @@ for url in dap_urls:
         # Only proceed if we have data in the range requested.
         if istart != istop:
             nsta = len(stations)
-            if len(r) == 4:
-                # Dimensions are time, height, lat, lon
-                d = a[0, 0:1, :, :].data
-                # Find the closest non-land point from a structured grid model.
-                if len(lon.shape) == 1:
-                    lon, lat = np.meshgrid(lon, lat)
-                j, i, dd = find_ij(lon, lat, d, obs_lon, obs_lat)
 
-                for n in range(nsta):
-                    # Only use if model cell is within max_dist of station
-                    if dd[n] <= max_dist:
-                        arr = a[istart:istop, 0:1, j[n], i[n]].data
-                        if arr.std() >= min_var:
-                            c = mod_df(arr, timevar, istart, istop,
-                                       mod_name, ts)
-                            name = obs_df[n].name
-                            model_df[n] = pd.concat([model_df[n], c], axis=1)
-                            model_df[n].name = name
-                            
-                        else:
-                            print 'min_var error'
-                    else:
-                        print 'Max dist error'
-            elif len(r) == 3:
-#                 print('[Structured grid model]:', url)
-                d = a[0, :, :].data
+            if len(r) == 4:
+                print('[Structured grid model]:', url)
+                zc = a.coord(axis='Z').points
+                zlev = max(enumerate(zc),key=itemgetter(1))[0]
+                d = a[0, 0, :, :].data
                 # Find the closest non-land point from a structured grid model.
                 if len(lon.shape) == 1:
                     lon, lat = np.meshgrid(lon, lat)
@@ -342,15 +335,17 @@ for url in dap_urls:
                     # Only use if model cell is within 0.01 degree of requested
                     # location.
                     if dd[n] <= max_dist:
-                        arr = a[istart:istop, j[n], i[n]].data
+                        arr = a[istart:istop, zlev, j[n], i[n]].data
                         if arr.std() >= min_var:
                             c = mod_df(arr, timevar, istart, istop,
                                        mod_name, ts)
                             name = obs_df[n].name
                             model_df[n] = pd.concat([model_df[n], c], axis=1)
                             model_df[n].name = name
-            elif len(r) == 2:
-#                 print('[Unstructured grid model]:', url)
+            elif len(r) == 3:
+                zc = a.coord(axis='Z').points
+                zlev = max(enumerate(zc),key=itemgetter(1))[0]
+                print('[Unstructured grid model]:', url)
                 # Find the closest point from an unstructured grid model.
                 index, dd = nearxy(lon.flatten(), lat.flatten(),
                                    obs_lon, obs_lat)
@@ -358,7 +353,7 @@ for url in dap_urls:
                     # Only use if model cell is within 0.1 degree of requested
                     # location.
                     if dd[n] <= max_dist:
-                        arr = a[istart:istop, index[n]].data
+                        arr = a[istart:istop, zlev, index[n]].data
                         if arr.std() >= min_var:
                             c = mod_df(arr, timevar, istart, istop,
                                        mod_name, ts)
@@ -378,6 +373,7 @@ for url in dap_urls:
 
 # <codecell>
 
+%matplotlib inline
 count = 0
 for df in obs_df:
     if not model_df[count].empty and not df.empty:
@@ -396,11 +392,14 @@ for df in obs_df:
 
 # <markdowncell>
 
-# ### Conclusions
+# ###Conclusions
 # 
-# 1. Observed water temperature data can be obtained through CO-OPS stations
-# 2. It is possible to obtain modeled forecast water temperature data, just not in all locations.
-# 3. It was not possible to compare the obs and model data because the model data was only available as a forecast.
-# 4. The observed data was available in high resolution (6 mins), making it useful to support recreational activities like surfing.
-# 5. When combined with wind direction and speed, it may be possible to see the effects of upwelling/downwelling on water temperature.
+# * Observed water temperature data can be obtained through CO-OPS stations
+# * It is possible to obtain modeled forecast water temperature data, just not in all locations.
+# * It was not possible to compare the obs and model data because the model data was only available as a forecast.
+# * The observed data was available in high resolution (6 mins), making it useful to support recreational activities like surfing.
+# * When combined with wind direction and speed, it may be possible to see the effects of upwelling/downwelling on water temperature.
+
+# <codecell>
+
 
