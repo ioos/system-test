@@ -34,6 +34,7 @@
 # <codecell>
 
 import datetime as dt
+import numpy as np
 from warnings import warn
 from io import BytesIO
 import folium
@@ -41,17 +42,22 @@ import netCDF4
 from IPython.display import HTML
 import iris
 from iris.exceptions import CoordinateNotFoundError, ConstraintMismatchError
+# iris.FUTURE.netcdf_promote = True
 import matplotlib.pyplot as plt
 from owslib.csw import CatalogueServiceWeb
 from owslib import fes
 import pandas as pd
 from pyoos.collectors.coops.coops_sos import CoopsSos
-import requests
+from operator import itemgetter
 
 from utilities import (fes_date_filter, collector2df, find_timevar, find_ij, nearxy, service_urls, mod_df, 
-                       get_coordinates, get_station_longName, inline_map, css_styles)
+                       get_coordinates, get_station_longName, get_NERACOOS_SOS_data, inline_map, css_styles)
 
 css_styles()
+
+# <codecell>
+
+%matplotlib inline
 
 # <headingcell level=4>
 
@@ -98,6 +104,7 @@ data_dict["temp"] = {"names": ['sea_water_temperature',
                                'water_temperature',
                                'sea_water_potential_temperature',
                                'water temperature',
+                               'potential temperature',
                                '*sea_water_temperature',
                                'Sea-Surface Temperature',
                                'sea_surface_temperature',
@@ -168,11 +175,11 @@ sos_urls = service_urls(csw.records,service='sos:url')
 sos_urls = sorted(set(sos_urls))
 
 print "Total SOS:",len(sos_urls)
-print "\n".join(sos_urls[0:10])
+print "\n".join(sos_urls[0:5])
 
 # <markdowncell>
 
-# ###Get most recent observations from all stations in bounding box
+# ###Get most recent observations from NOAA COOPS stations in bounding box
 
 # <codecell>
 
@@ -208,13 +215,13 @@ obs_loc_df.head()
 
 # <codecell>
 
-stations = [sta.split(':')[-1] for sta in obs_loc_df['station_id']]
+station_ids = [sta.split(':')[-1] for sta in obs_loc_df['station_id']]
 obs_lon = [sta for sta in obs_loc_df['longitude (degree)']]
 obs_lat = [sta for sta in obs_loc_df['latitude (degree)']]
 
 # <headingcell level=3>
 
-# Request CSV response from SOS and convert to Pandas DataFrames
+# Request CSV response from COOPS SOS and convert to Pandas DataFrames
 
 # <codecell>
 
@@ -223,20 +230,45 @@ ts = pd.DataFrame(index=ts_rng)
 
 # Save all of the observation data into a list of dataframes
 obs_df = []
-
-for sta in stations:
+station_long_names = []
+for sta in station_ids:
     raw_df = collector2df(collector, sta, sos_name)
     
     col = 'Observed Data'
     concatenated = pd.concat([raw_df, ts], axis=1)[col]
     obs_df.append(pd.DataFrame(concatenated))
     obs_df[-1].name = raw_df.name
+    obs_df[-1].provider = raw_df.provider
     
-    
+    # Keep a master list of long names
+    station_long_names.append(raw_df.name)
+
+# <markdowncell>
+
+# ###Get observations from NERACOOS buoys in bounding box
+
+# <codecell>
+
+#Loop through the NERACOOS SOS endpoints and get the data into a DataFrame
+for get_caps_url in sos_urls:
+    if 'neracoos' in get_caps_url:
+        # Function for extracting NERACOOS data from SOS (see utilities.py)
+        raw_df = get_NERACOOS_SOS_data(get_caps_url, 'http://mmisw.org/ont/cf/parameter/sea_water_temperature', iso_start, iso_end)
+        if not raw_df.empty:
+            col = 'Observed Data'
+            concatenated = pd.concat([raw_df, ts], axis=1)[col]
+            obs_df.append(pd.DataFrame(concatenated))
+            obs_df[-1].name = raw_df.name
+            obs_df[-1].provider = raw_df.provider
+            
+            obs_lat.append(float(raw_df.latitude))
+            obs_lon.append(float(raw_df.longitude))
+            station_long_names.append(raw_df.name)
 
 # <markdowncell>
 
 # ### Plot the Observation Stations on Map
+# #### Purple markers are NERACOOS buoys, blue markers are CO-OPS stations
 
 # <codecell>
 
@@ -251,14 +283,17 @@ n = 0
 for df in obs_df:
     #get the station data from the sos end point
     longname = df.name
-    lat = obs_loc_df['latitude (degree)'][n]
-    lon = obs_loc_df['longitude (degree)'][n]
-    popup_string = ('<b>Station:</b><br>'+ longname)
-    if len(df) > min_data_pts:
-        m.simple_marker([lat, lon], popup=popup_string)
+    lat = obs_lat[n]
+    lon = obs_lon[n]
+    if 'NERACOOS' in df.provider:
+        color = 'purple'
+    else:
+        color = 'blue'
+    popup_string = ('<b>Station:</b><br>'+ str(longname))
+    m.simple_marker([lat, lon], popup=popup_string, marker_color=color)
     n += 1
-m.line(get_coordinates(bounding_box,bounding_box_type), line_color='#FF0000', line_weight=5)
 
+m.line(get_coordinates(bounding_box,bounding_box_type), line_color='#FF0000', line_weight=5)
 inline_map(m)
 
 # <markdowncell>
@@ -292,13 +327,12 @@ for df in obs_df:
     model_df.append(pd.DataFrame(index=ts.index))
     model_df[-1].name = df.name
 
-# Use only data within 0.06 degrees 
-max_dist = 0.06
+# Use only data within 0.10 degrees (about 10 km)
+max_dist = 0.10
 
 # Use only data where the standard deviation of the time series exceeds 0.01 m (1 cm).
 # This eliminates flat line model time series that come from land points that should have had missing values.
 min_var = 0.01
-
 for url in dap_urls:
     if 'SOS' in url:
         continue
@@ -311,6 +345,7 @@ for url in dap_urls:
         timevar = find_timevar(a)
         lat = a.coord(axis='Y').points
         lon = a.coord(axis='X').points
+        
         jd = timevar.units.num2date(timevar.points)
         start = timevar.units.date2num(jd_start)
         istart = timevar.nearest_neighbour_index(start)
@@ -319,34 +354,19 @@ for url in dap_urls:
 
         # Only proceed if we have data in the range requested.
         if istart != istop:
-            nsta = len(stations)
-            if len(r) == 4:
-                print url
-                # Dimensions are time, height, lat, lon
-                d = a[0, 0:1, :, :].data
-                # Find the closest non-land point from a structured grid model.
-                if len(lon.shape) == 1:
-                    lon, lat = np.meshgrid(lon, lat)
-                j, i, dd = find_ij(lon, lat, d, obs_lon, obs_lat)
+            nsta = len(station_long_names)
 
-                for n in range(nsta):
-                    # Only use if model cell is within max_dist of station
-                    if dd[n] <= max_dist:
-                        arr = a[istart:istop, 0:1, j[n], i[n]].data
-                        if arr.std() >= min_var:
-                            c = mod_df(arr, timevar, istart, istop,
-                                       mod_name, ts)
-                            name = obs_df[n].name
-                            model_df[n] = pd.concat([model_df[n], c], axis=1)
-                            model_df[n].name = name
-                            
-                        else:
-                            print 'min_var error'
-                    else:
-                        print 'Max dist error'
-            elif len(r) == 3:
-#                 print('[Structured grid model]:', url)
-                d = a[0, :, :].data
+            if len(r) == 4:
+                print('[Structured grid model]:', url)
+#                 zc = a.coord(axis='Z').points
+#                 zlev = max(enumerate(zc),key=itemgetter(1))[0]
+                positive = a.coord(axis='Z').attributes.get('positive', None)
+                if positive == 'up':
+                    zlev = np.argmax(a.coord(axis='Z').points)
+                else:
+                    zlev = np.argmin(a.coord(axis='Z').points)
+                
+                d = a[0, 0, :, :].data
                 # Find the closest non-land point from a structured grid model.
                 if len(lon.shape) == 1:
                     lon, lat = np.meshgrid(lon, lat)
@@ -355,15 +375,23 @@ for url in dap_urls:
                     # Only use if model cell is within 0.01 degree of requested
                     # location.
                     if dd[n] <= max_dist:
-                        arr = a[istart:istop, j[n], i[n]].data
+                        arr = a[istart:istop, zlev, j[n], i[n]].data
                         if arr.std() >= min_var:
                             c = mod_df(arr, timevar, istart, istop,
                                        mod_name, ts)
                             name = obs_df[n].name
                             model_df[n] = pd.concat([model_df[n], c], axis=1)
                             model_df[n].name = name
-            elif len(r) == 2:
-#                 print('[Unstructured grid model]:', url)
+            elif len(r) == 3:
+                print('[Unstructured grid model]:', url)
+#                 zc = a.coord(axis='Z').points
+#                 zlev = max(enumerate(zc),key=itemgetter(1))[0]
+                positive = a.coord(axis='Z').attributes.get('positive', None)
+                if positive == 'up':
+                    zlev = np.argmax(a.coord(axis='Z').points)
+                else:
+                    zlev = np.argmin(a.coord(axis='Z').points)
+                
                 # Find the closest point from an unstructured grid model.
                 index, dd = nearxy(lon.flatten(), lat.flatten(),
                                    obs_lon, obs_lat)
@@ -371,7 +399,7 @@ for url in dap_urls:
                     # Only use if model cell is within 0.1 degree of requested
                     # location.
                     if dd[n] <= max_dist:
-                        arr = a[istart:istop, index[n]].data
+                        arr = a[istart:istop, zlev, index[n]].data
                         if arr.std() >= min_var:
                             c = mod_df(arr, timevar, istart, istop,
                                        mod_name, ts)
@@ -384,6 +412,11 @@ for url in dap_urls:
             ConstraintMismatchError) as e:
         warn("\n%s\n" % e)
         pass
+
+# <markdowncell>
+
+# <div class="warning"><strong>Some models can't be extracted by IRIS</strong> <br>The [USEAST ROMS model](http://omgsrv1.meas.ncsu.edu:8080/thredds/dodsC/fmrc/us_east/US_East_Forecast_Model_Run_Collection_best.ncd.html) can't be loaded because of an error reading the time units (units: hours since 2014-07-10T00:00:00Z) 
+# <br> The [UMASS Dartmouth FVCOM model](http://www.smast.umassd.edu:8080/thredds/dodsC/FVCOM/NECOFS/Forecasts/NECOFS_FVCOM_OCEAN_MASSBAY_FORECAST.nc.html) cannot be read becasue it has 2 dimensions for ocean_sigma coordinate  </div>
 
 # <markdowncell>
 
@@ -400,7 +433,8 @@ for df in obs_df:
         model_df[count].plot(ax=ax, title=model_df[count].name, legend=True)
         
         # Overlay the obs data (resample to hourly instead of 6 mins!)
-        df['Observed Data'].resample('H', how='mean').plot(ax=ax, title=df.name, color='k', linewidth=2, legend=True)
+#         df['Observed Data'].resample('H', how='mean').plot(ax=ax, title=df.name, color='k', linewidth=2, legend=True)
+        df['Observed Data'].plot(ax=ax, title=df.name, color='k', linewidth=2, legend=True)
         ax.set_ylabel('Sea Water Temperature (C)')
         ax.legend(loc='right')
         plt.show()
@@ -438,11 +472,14 @@ n = 0
 for df in obs_df:
     #get the station data from the sos end point
     longname = df.name
-    lat = obs_loc_df['latitude (degree)'][n]
-    lon = obs_loc_df['longitude (degree)'][n]
-    popup_string = ('<b>Station:</b><br>'+ longname)
-    if len(df) > min_data_pts:
-        m.simple_marker([lat, lon], popup=popup_string)
+    lat = obs_lat[n]
+    lon = obs_lon[n]
+    if 'NERACOOS' in df.provider:
+        color = 'purple'
+    else:
+        color = 'blue'
+    popup_string = ('<b>Station:</b><br>'+ str(longname))
+    m.simple_marker([lat, lon], popup=popup_string, marker_color=color)
     n += 1
     
 m.line(get_coordinates(bounding_box,bounding_box_type), line_color='#FF0000', line_weight=5)

@@ -9,6 +9,4 @@ pyoos
 pyshp
 Pillow
 pyke
-Shapely
-biggus
-prettyplotlib
+bs4

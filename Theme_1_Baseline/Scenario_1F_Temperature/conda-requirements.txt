@@ -5,6 +5,6 @@ OWSLib
 lxml
 pyoos
 cython
-pyshp
 Pillow
-pyke
+iris
+bs4

@@ -18,10 +18,12 @@ from pandas import DataFrame, concat, read_csv
 # Custom IOOS/ASA modules (available at PyPI).
 from owslib import fes
 from owslib.ows import ExceptionReport
+import requests
+
+from bs4 import BeautifulSoup
 
 
-def fes_date_filter(start_date='1900-01-01', stop_date='2100-01-01',
-              constraint='overlaps'):
+def fes_date_filter(start_date='1900-01-01', stop_date='2100-01-01', constraint='overlaps'):
     """Hopefully something like this will be implemented in fes soon."""
     if constraint == 'overlaps':
         propertyname = 'apiso:TempExtent_begin'
@@ -49,30 +51,30 @@ def get_station_longName(station, provider):
                'procedure=urn:ioos:station:wmo:%s') % station
     elif provider.upper() == 'COOPS':
         url = ('http://opendap.co-ops.nos.noaa.gov/ioos-dif-sos/SOS?service=SOS&'
-           'request=DescribeSensor&version=1.0.0&'
-           'outputFormat=text/xml;subtype="sensorML/1.0.1"&'
-           'procedure=urn:ioos:station:NOAA.NOS.CO-OPS:%s') % station
+               'request=DescribeSensor&version=1.0.0&'
+               'outputFormat=text/xml;subtype="sensorML/1.0.1"&'
+               'procedure=urn:ioos:station:NOAA.NOS.CO-OPS:%s') % station
     try:
-	    tree = etree.parse(urlopen(url))
-	    root = tree.getroot()
-	    namespaces = {'sml': "http://www.opengis.net/sensorML/1.0.1"}
-	    longName = root.xpath("//sml:identifier[@name='longName']/sml:Term/sml:value/text()", namespaces=namespaces)
-	    if len(longName) == 0:
-	    	# Just return the station id
-	        return station
-	    else:
-	        return longName[0]
+        tree = etree.parse(urlopen(url))
+        root = tree.getroot()
+        namespaces = {'sml': "http://www.opengis.net/sensorML/1.0.1"}
+        longName = root.xpath("//sml:identifier[@name='longName']/sml:Term/sml:value/text()", namespaces=namespaces)
+        if len(longName) == 0:
+            # Just return the station id
+            return station
+        else:
+            return longName[0]
     except Exception as e:
-	    warn(e)
-	    # Just return the station id
-	    return station
+        warn(e)
+        # Just return the station id
+        return station
 
 
 def collector2df(collector, station, sos_name, provider='COOPS'):
     """Request CSV response from SOS and convert to Pandas DataFrames."""
     collector.features = [station]
     collector.variables = [sos_name]
-    
+
     long_name = get_station_longName(station, provider)
     try:
 
@@ -88,6 +90,44 @@ def collector2df(collector, station, sos_name, provider='COOPS'):
         data_df = DataFrame()  # Assigning an empty DataFrame for now.
 
     data_df.name = long_name
+    data_df.provider = provider
+    return data_df
+
+
+def get_NERACOOS_SOS_data(get_caps_url, field, begin, end):
+    """ This function gets data from NERACOOS buoys using SOS """
+
+    # Build url
+    try:
+        offering = get_caps_url.split('SOS/')[1].split('/')[0]
+        sos_url = (get_caps_url.split('GetCapabilities')[0] + 'GetObservation&version=1.0.0&'
+                   'observedProperty=%s&offering=%s&'
+                   'responseFormat=text%%2Fxml%%3Bsubtype%%3D"om/1.0.0"&'
+                   'eventTime=%s/%s' % (field, offering, begin, end))
+        # Get response
+        response = requests.get(sos_url)
+        xml_soup = BeautifulSoup(response.text, "xml")
+
+        values = xml_soup.find('values').next
+
+        # Format the data into something that can be read by Pandas
+        formatted_data = 'date_time,Observed Data\n{0}'.format(values.replace(' ', '\n'))
+
+        data_df = read_csv(BytesIO(formatted_data), parse_dates=True, index_col='date_time')
+        name = xml_soup.find('name').next
+        data_df.name = name.split(':')[-1]
+
+        # Get latitude and longitude
+        lat_lon_str = xml_soup.find('lowerCorner').next
+        lat, lon = lat_lon_str.split(' ')
+        data_df.latitude = lat
+        data_df.longitude = lon
+        data_df.provider = 'NERACOOS'
+
+    except Exception as e:
+        print str(e)
+        data_df = DataFrame()
+
     return data_df
 
 
