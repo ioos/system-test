@@ -52,7 +52,8 @@ from pyoos.collectors.coops.coops_sos import CoopsSos
 import requests
 
 from utilities import (date_range, coops2df, coops2data, find_timevar, find_ij, nearxy, service_urls, mod_df, 
-                       get_coordinates, get_Coops_longName, inline_map, get_coops_sensor_name,css_styles)
+                       get_coordinates, get_Coops_longName, inline_map, get_coops_sensor_name,css_styles,
+                       find_nearest, buildSFOUrls,findSFOIndexs,uv2ws,uv2wd,uv2wdws,isDataValid,cycleAndGetData)
 
 import cStringIO
 from lxml import etree
@@ -68,7 +69,7 @@ css_styles()
 
 # <markdowncell>
 
-# <div class="warning"><strong>Temporal Bounds</strong> - Anything longer than one year kills the CO-OPS service</div>
+# <div class="warning"><strong>Bounding Box</strong> - Small bounding box for San Francisco Bay (named West)</div>
 
 # <codecell>
 
@@ -81,7 +82,7 @@ area = {'Hawaii': [-160.0, 18.0, -154., 23.0],
         'Puerto Rico': [-71, 14, -60, 24],
         'East Coast': [-77, 34, -70, 40],
         'North West': [-130, 38, -121, 50],
-        'West': [-132, 30, -105, 47]
+        'West': [-123, 36, -121, 40]
         }
 
 bounding_box = area['West']
@@ -136,6 +137,10 @@ print str(len(csw.records)) + " csw records found"
 for rec, item in csw.records.items():
     print(item.title)
 
+# <markdowncell>
+
+# #### List end points available
+
 # <codecell>
 
 dap_urls = service_urls(csw.records)
@@ -162,7 +167,7 @@ iso_end = end_time.strftime('%Y-%m-%dT%H:%M:%SZ')
 
 # <markdowncell>
 
-# ### reset the station list
+# #### create a list of stations available
 
 # <codecell>
 
@@ -222,6 +227,7 @@ obs_loc_df = pd.read_csv(url)
 # <codecell>
 
 st_list = processStationInfo(obs_loc_df,st_list,"coops")
+print st_list
 
 # <markdowncell>
 
@@ -259,10 +265,7 @@ st_list = processStationInfo(obs_loc_df,st_list,"ndbc")
 
 # <codecell>
 
-print st_list
-
-# <codecell>
-
+#function handles current requests
 def coopsCurrentRequest(station_id,tides_dt_start,tides_dt_end):
     tides_data_options = "time_zone=gmt&application=ports_screen&format=json"
     tides_url = "http://tidesandcurrents.noaa.gov/api/datagetter?"   
@@ -280,8 +283,9 @@ def coopsCurrentRequest(station_id,tides_dt_start,tides_dt_end):
         data_dt = []
         data_spd = []
         data_dir = []
-        for row in r:            
-            data_spd.append(float(row['s']))
+        for row in r:
+            #convert from knots to cm/s
+            data_spd.append(float(row['s'])*51.4444444)
             data_dir.append(float(row['d']))            
             date_time_val = dt.datetime.strptime(row['t'], '%Y-%m-%d %H:%M')
             data_dt.append(date_time_val)
@@ -298,7 +302,7 @@ def coopsCurrentRequest(station_id,tides_dt_start,tides_dt_end):
 
 # <markdowncell>
 
-# ### DAP does not have the most recent
+# <div class="warning"><strong>NDBC DAP</strong> - NDBC DAP does not have the most recent observations</div>
 
 # <codecell>
 
@@ -358,6 +362,10 @@ def ndbcSOSRequest(station,date_range):
     obs_loc_df = pd.read_csv(url)
     return obs_loc_df
 
+# <markdowncell>
+
+# #### Get the observation data from the stations identified
+
 # <codecell>
 
 divid = str(uuid.uuid4())
@@ -380,8 +388,6 @@ for station_index in st_list.keys():
         df = coopsCurrentRequest(st,tides_dt_start,tides_dt_end)
     elif st_list[station_index]['source'] == "ndbc":
         df = ndbcSOSRequest(station_index,date_range_string)
-        #DAP request
-        #df = ndbcCurrentRequest(st,jd_start,jd_stop)
     
     if (df is not None) and (len(df)>0):
         st_list[station_index]['hasObsData'] = True
@@ -397,39 +403,9 @@ for station_index in st_list.keys():
     display(Javascript("$('div#%s').width('%i%%')" % (divid, int(percent_compelte))))
     
 
-# <codecell>
+# <markdowncell>
 
-#find the closest point, distance in degrees (coordinates of the points in degrees)        
-def find_nearest(obs_lat,obs_lon, lats,lons):    
-    point1 = Point(obs_lon,obs_lat)
-    dist = 999999999
-    index_i = -1
-    index_j = -1    
-    for i in range(0,len(lats)):
-        for j in range(0,len(lons)):
-            point2 = Point(lons[j], lats[i])
-            val = point1.distance(point2)
-            if val < dist:
-                index_i = i
-                index_j = j
-                dist = val    
-    return [index_i,index_j,dist]
-
-# <codecell>
-
-def uv2ws(u,v):
-    return np.sqrt(np.square(u)+np.square(v))
- 
-def uv2wd(u,v):
-    '''
-    NOTE: this is direction TOWARDS. u/v are mathematical vectors so direction is where they are pointing
-    NOTE: arctan2(u,v) automatically handles the 90 degree rotation so North is zero, arctan2(v,u), mathematical version, has 0 at east
-    '''
-    wd = np.degrees(np.arctan2(u,v))
-    return np.where(wd >= 0, wd, wd+360)
- 
-def uv2wdws(u,v):
-    return zip(uv2wd(u,v),uv2ws(u,v))
+# <div class="success"><strong>HF Radar</strong> - Gets the HF radar for the requested date range</div>
 
 # <codecell>
 
@@ -487,36 +463,19 @@ def get_hr_radar_dap_data(dap_urls,st_list,jd_start,  jd_stop):
                 lat_idx = ret[0]
                 lon_idx = ret[1]
                 dist_deg = ret[2]
-                print "lat,lon,dist=",ret
+                #print "lat,lon,dist=",ret
                 
                 if len(u_var.dimensions) == 3:
                     #3dimensions
-                    u = u_var[date_idx,lat_idx,lon_idx]
-                    v = v_var[date_idx,lat_idx,lon_idx]
-                    pass                
-                elif len(u_var.dimensions) == 4:    
-                    #4dimensions, usually level
-                    u = u_var[date_idx,0,lat_idx,lon_idx]                    
-                    v = v_var[date_idx,0,lat_idx,lon_idx]  
-                    pass                          
-                try:
+                    ret = cycleAndGetData(u_var,v_var,date_idx,lat_idx,lon_idx)   
+                    u_vals = ret[0]
+                    v_vals = ret[1]
                     
-                    print "\t",type(u)
+                    lat_idx = ret[2]
+                    lon_idx = ret[3]
                     
-                    try:
-                        #try and get the data using a filled array
-                        u_vals = u.filled(np.nan)
-                        v_vals = v.filled(np.nan)
-                        if u_var.units == "m s-1":                                                    
-                            #converts m to cm
-                            u_vals = (u_vals)*100.
-                            v_vals = (v_vals)*100.
-                    except:    
-                        pass
-                                                            
-                    print "units",u_var.units                         
-                    
-
+                    print "lat,lon,dist=",ret[2],ret[3]                                                 
+                try:                                                              
                     #turn vectors in the speed and direction
                     ws = uv2ws(u_vals,v_vals) 
                     wd = uv2wd(u_vals,v_vals) 
@@ -549,36 +508,124 @@ def get_hr_radar_dap_data(dap_urls,st_list,jd_start,  jd_stop):
 
 df_list = get_hr_radar_dap_data(dap_urls,st_list,jd_start,  jd_stop)
 
+# <markdowncell>
+
+# <div class="success"><strong>Model Data</strong> - get model data from the SFO ports operational model</div>
+
+# <codecell>
+
+def extractSFOModelData(lat_lon_list,name_list):
+    print "Extract SFOModelData from http://opendap.co-ops.nos.noaa.gov/thredds/ "
+    urls = buildSFOUrls(jd_start,  jd_stop)
+    index = -1   
+    #setup struct
+    df_list = {}
+    for n in name_list:
+        df_list[n] = {}        
+    
+    data_dates = []
+    for i, url in enumerate(urls):
+        try:
+            #print url
+            nc = netCDF4.Dataset(url, 'r')   
+        except:
+            #print  "\tNot Available"
+            break
+            
+        if i == 0:
+            lats = nc.variables['lat'][:]
+            lons = nc.variables['lon'][:]
+            lons = lons-360
+            index_list,dist_list = findSFOIndexs(lats,lons,lat_lon_list)
+
+        #Extract the model data using and MF dataset
+        time_dim = nc.variables['time']
+        u_dim = nc.variables['u']
+        v_dim = nc.variables['v']
+
+        u_var = u_dim[:,0,index_list] 
+        v_var = v_dim[:,0,index_list]
+
+        #create the dates            
+        dates = num2date(time_dim[:],units=time_dim.units,calendar='gregorian')                
+        #data_dates.append(dates)
+        
+        for i, n in enumerate(name_list):
+            #get lat and lon
+            df_list[n]['lat'] = lats[index_list[i]]
+            df_list[n]['lon'] = lons[index_list[i]]
+            #create speed and direction, convert 
+            ws = uv2ws(u_var[:,i]*100,v_var[:,i]*100) 
+            wd = uv2wd(u_var[:,i]*100,v_var[:,i]*100) 
+
+            data = {}
+            data['sea_water_speed (cm/s)'] = ws
+            data['direction_of_sea_water_velocity (degree)'] = wd
+            columns = ['sea_water_speed (cm/s)','direction_of_sea_water_velocity (degree)']
+            
+            df = pd.DataFrame(data=data, index=dates, columns=columns)
+            #create struct
+            if 'data' in df_list[n]:
+                df_list[n]['data'] = df_list[n]['data'].append(df)        
+            else:
+                df_list[n]['data'] = df
+
+    return df_list
+
+# <markdowncell>
+
+# <div class="success"><strong>Station Model Data</strong> - For the stations find the model data at the same location</div>
+
+# <codecell>
+
+## Stations we know contain all three data types of interest
+st_known =['urn:ioos:station:NOAA.NOS.CO-OPS:s09010','urn:ioos:station:NOAA.NOS.CO-OPS:s08010']
+lat_lon_list = []
+name_list = []
+for st in st_list:
+    if st in st_known:
+        lat = st_list[st]['lat']
+        lon = st_list[st]['lon']    
+        name_list.append(st)
+        lat_lon_list.append([lat,lon])
+        
+model_data = extractSFOModelData(lat_lon_list,name_list)
+
 # <codecell>
 
 for station_index in st_list.keys():
     df = st_list[station_index]['obsData']  
     if st_list[station_index]['hasObsData']:
-        
-        fig = plt.figure(figsize=(18, 3))
+        fig = plt.figure(figsize=(16, 3))
         plt.plot(df.index, df['sea_water_speed (cm/s)'])
         fig.suptitle('Station:'+station_index, fontsize=14)
-        plt.xlabel('Date', fontsize=18)
-        plt.ylabel('sea_water_speed (cm/s)', fontsize=16)      
+        plt.xlabel('Date', fontsize=14)
+        plt.ylabel('sea_water_speed (cm/s)', fontsize=14)   
         
-# post those stations not already added        
-for ent in df_list:  
+        if station_index in model_data:
+            df_model = model_data[station_index]['data']
+            plt.plot(df_model.index, df_model['sea_water_speed (cm/s)'])
+        # post those stations not already added        
+        for ent in df_list:  
 
-    if ent['ws_pts'] >4:      
-        df = ent['data']   
-        fig = plt.figure(figsize=(18, 3))
-        plt.plot(df.index, df['sea_water_speed (cm/s)'])
-        fig.suptitle('HF Radar:'+ " lat:"+str(ent["lat"])+" lon:"+str(ent["lon"]), fontsize=14)
-        plt.xlabel('Date', fontsize=18)
-        plt.ylabel('sea_water_speed (cm/s)', fontsize=16)  
-        ent['valid'] = True     
+            if ent['ws_pts'] >4:   
+                if station_index == ent['name'] :
+                    df = ent['data']   
+                    plt.plot(df.index, df['sea_water_speed (cm/s)'])
+                    ent['valid'] = True 
+                    
+    l = plt.legend(('Station Obs','Model','HF Radar'), loc='upper left')
+
+# <markdowncell>
+
+# Model data is not in the NGDC catalog
 
 # <codecell>
 
 #add map title
-htmlContent = ('<p><h4>Station Map: Red circles have no obs data, Green is coops, Dark Blue is ndbc, Purple is HR Radar locations</h4></p>') 
+htmlContent = ('<p><h4>Location Map: Blue: Station Obs, Green: Model Data, Red: HF Radar</h4></p>') 
 station =  st_list[st_list.keys()[0]]
-map = folium.Map(location=[station["lat"], station["lon"]], zoom_start=4)
+map = folium.Map(location=[station["lat"], station["lon"]], zoom_start=10)
 map.line(get_coordinates(bounding_box, bounding_box_type), line_color='#FF0000', line_weight=5)
 
 #plot the obs station, 
@@ -588,7 +635,7 @@ for st in st_list:
     
     popupString = '<b>Obs Location:</b><br>'+st+'<br><b>Source:</b><br>'+st_list[st]['source']
     
-    if st_list[st]['hasObsData'] == False:
+    if 'hasObsData' in st_list[st] and st_list[st]['hasObsData'] == False:
         map.circle_marker([lat,lon], popup=popupString, 
                           radius=1000,
                           line_color='#FF0000',
@@ -596,41 +643,48 @@ for st in st_list:
                           fill_opacity=0.2)
         
     elif st_list[st]['source'] == "coops":
-        map.simple_marker([lat,lon], popup=popupString,marker_color="green",marker_icon="star")
+        map.simple_marker([lat,lon], popup=popupString,marker_color="darkblue",marker_icon="star")
     elif st_list[st]['source'] == "ndbc":
         map.simple_marker([lat,lon], popup=popupString,marker_color="darkblue",marker_icon="star")
 
-for ent in df_list:
-    if 'valid' in ent:
-        if ent['valid'] == True:       
-            lat = ent['lat']
-            lon = ent['lon']
-            popupstring = "HF Radar: ["+ str(lat)+":"+str(lon)+"]" + "<br>for<br>" + ent['name']
-            map.circle_marker([lat,lon], popup=popupstring, 
-                              radius=1000,
-                              line_color='#FF00FF',
-                              fill_color='#FF00FF', 
-                              fill_opacity=0.5)
-                          
+try:
+    for ent in df_list:
+
+        lat = ent['lat']
+        lon = ent['lon']
+        popupstring = "HF Radar: ["+ str(lat)+":"+str(lon)+"]" + "<br>for<br>" + ent['name']
+        map.circle_marker([lat,lon], popup=popupstring, 
+                          radius=500,
+                          line_color='#FF0000',
+                          fill_color='#FF0000', 
+                          fill_opacity=0.5)
+except:
+    pass
+
+try:
+    for st in model_data:
+
+        lat = model_data[st]['lat']
+        lon = model_data[st]['lon']
+        popupstring = "HF Radar: ["+ str(lat)+":"+str(lon)+"]" + "<br>for<br>" + ent['name']
+        map.circle_marker([lat,lon], popup=popupstring, 
+                          radius=500,
+                          line_color='#66FF33',
+                          fill_color='#66FF33', 
+                          fill_opacity=0.5)
+except:
+    pass
+
 display(HTML(htmlContent))
 
 ## adds the HF radar tile layers
-map.add_tile_layer(tile_name='hfradar 6km',
-                   tile_url='http://hfradar.ndbc.noaa.gov/tilesavg.php?s=10&e=100&x={x}&y={y}&z={z}&t=2014-8-21 17:00:00&rez=6')
+jd_now = dt.datetime.utcnow()
 map.add_tile_layer(tile_name='hfradar 2km',
-                   tile_url='http://hfradar.ndbc.noaa.gov/tilesavg.php?s=10&e=100&x={x}&y={y}&z={z}&t=2014-8-21 17:00:00&rez=2')
-map.add_tile_layer(tile_name='hfradar 1km',
-                   tile_url='http://hfradar.ndbc.noaa.gov/tilesavg.php?s=10&e=100&x={x}&y={y}&z={z}&t=2014-8-21 17:00:00&rez=1')
-map.add_tile_layer(tile_name='hfradar 500m',
-                   tile_url='http://hfradar.ndbc.noaa.gov/tilesavg.php?s=10&e=100&x={x}&y={y}&z={z}&t=2014-8-21 17:00:00&rez=0.5')
-
+                   tile_url='http://hfradar.ndbc.noaa.gov/tilesavg.php?s=10&e=100&x={x}&y={y}&z={z}&t='+str(jd_now.year)+'-'+str(jd_now.month)+'-'+str(jd_now.day)+' '+str(jd_now.hour-2)+':00:00&rez=2')
 
 map.add_layers_to_map()
 
 inline_map(map)  
-
-# <codecell>
-
 
 # <codecell>
 

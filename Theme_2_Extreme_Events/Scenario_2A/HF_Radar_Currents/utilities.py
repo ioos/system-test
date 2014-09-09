@@ -13,6 +13,7 @@ except ImportError:
 
 # Scientific stack.
 import numpy as np
+import numpy.ma as ma
 from IPython.display import HTML
 from pandas import DataFrame, concat, read_csv
 from bs4 import BeautifulSoup
@@ -20,6 +21,9 @@ from bs4 import BeautifulSoup
 # Custom IOOS/ASA modules (available at PyPI).
 from owslib import fes
 from owslib.ows import ExceptionReport
+
+import datetime as dt
+from shapely.geometry import Point
 
 
 def date_range(start_date='1900-01-01', stop_date='2100-01-01',
@@ -258,3 +262,118 @@ def css_styles():
         }
         </style>
     """)
+
+
+# multiple files for time step, were only looking at nowcast(past) values
+# times are 3z,9z,15z,21z
+def buildSFOUrls(jd_start,  jd_stop):
+    url_list = []
+    time_list = ['03z','09z','15z','21z']
+    delta = jd_stop-jd_start
+    for i in range((delta.days)+1):
+        model_file_date = jd_start + dt.timedelta(days=i)
+        base_url = 'http://opendap.co-ops.nos.noaa.gov/thredds/dodsC/NOAA/SFBOFS/MODELS/'
+
+        val_month = ''
+        val_year = ''
+        val_day = ''
+        #month
+        if model_file_date.month <10:
+            val_month = "0"+str(model_file_date.month)
+        else:    
+            val_month = str(model_file_date.month)
+        #year
+        val_year = str(model_file_date.year) 
+        #day
+        if model_file_date.day <10:
+             val_day = "0"+str(model_file_date.day)
+        else:    
+            val_day = str(model_file_date.day)
+        
+        file_name = '/nos.sfbofs.stations.nowcast.'+val_year+val_month+val_day
+        for t in time_list:
+            t_val = '.t'+t+'.nc'
+            url_list.append(base_url +val_year+val_month+ file_name + t_val)
+    return url_list
+
+def findSFOIndexs(lats,lons,lat_lon_list):   
+    index_list = []
+    dist_list = []
+    for val in lat_lon_list:
+        point1 = Point(val[1],val[0])
+        dist = 999999999
+        index = -1  
+        for i in range(0,len(lats)):       
+            point2 = Point(lons[i], lats[i])
+            val = point1.distance(point2)
+            if val < dist:
+                index = i
+                dist = val   
+        index_list.append(index)
+        dist_list.append(dist)
+    return index_list,dist_list
+
+def uv2ws(u,v):
+    return np.sqrt(np.square(u)+np.square(v))
+ 
+def uv2wd(u,v):
+    '''
+    NOTE: this is direction TOWARDS. u/v are mathematical vectors so direction is where they are pointing
+    NOTE: arctan2(u,v) automatically handles the 90 degree rotation so North is zero, arctan2(v,u), mathematical version, has 0 at east
+    '''
+    wd = np.degrees(np.arctan2(u,v))
+    return np.where(wd >= 0, wd, wd+360)
+ 
+def uv2wdws(u,v):
+    return zip(uv2wd(u,v),uv2ws(u,v))
+
+def isDataValid(u,v):    
+    #count the non nan stations
+    num_not_nan = np.count_nonzero(~np.isnan(u))
+    #print "\t",u
+    if num_not_nan>10:
+        return True
+    else:
+        return False
+
+def cycleAndGetData(u_var,v_var,date_idx,lat_idx,lon_idx):
+    
+    lat_list = [0,-1,1,0,-1,-1,0,-1,1]
+    lon_list = [0,0,1,1,1,-1,-1,-1,0]    
+
+    for i in range(0,len(lat_list)):    
+        #print i
+        u_vals = u_var[date_idx,lat_idx+lat_list[i],lon_idx+lon_list[i]]
+        v_vals = v_var[date_idx,lat_idx+lat_list[i],lon_idx+lon_list[i]]       
+
+        #print "\t",type(u_vals)
+        if isinstance(u_vals,ma.masked_array):           
+            #try and get the data using a filled array
+            u_vals = u_vals.filled(np.nan)
+            v_vals = v_vals.filled(np.nan)
+            
+        #convert from m/s to cm/s
+        if u_var.units == "m s-1":
+            u_vals = (u_vals)*100.
+            v_vals = (v_vals)*100.
+            
+        #if the data is not valid lets carry on searching
+        if isDataValid(u_vals,v_vals):
+            return [u_vals, v_vals,lat_idx+lat_list[i],lon_idx+lon_list[i]]
+    return [u_vals, v_vals,lat_idx+lat_list[i],lon_idx+lon_list[i]]
+
+#find the closest point, distance in degrees (coordinates of the points in degrees)        
+def find_nearest(obs_lat,obs_lon, lats,lons):    
+    point1 = Point(obs_lon,obs_lat)
+    dist = 999999999
+    index_i = -1
+    index_j = -1    
+    for i in range(0,len(lats)):
+        for j in range(0,len(lons)):
+            point2 = Point(lons[j], lats[i])
+            val = point1.distance(point2)
+            if val < dist:
+                index_i = i
+                index_j = j
+                dist = val    
+    return [index_i,index_j,dist]
