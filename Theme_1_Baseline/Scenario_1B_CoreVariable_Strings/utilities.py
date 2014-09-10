@@ -24,6 +24,9 @@ service_mapping = {
 
 
 def normalize_service_urn(urn):
+    if " " in urn:
+        # There is a space in this thing?  Just return it.
+        return urn
     urns = urn.split(':')
     if urns[-1].lower() == "url":
         del urns[-1]

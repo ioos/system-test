@@ -92,12 +92,8 @@ known_csw_servers = ['http://data.nodc.noaa.gov/geoportal/csw',
                      'http://cida.usgs.gov/gdp/geonetwork/srv/en/csw',
                      'http://geodiscover.cgdi.ca/wes/serviceManagerCSW/csw',
                      'http://geoport.whoi.edu/gi-cat/services/cswiso',
-                     #https://data.noaa.gov/csw',
+                     'https://data.noaa.gov/csw',
                      ]
-
-# <markdowncell>
-
-# <div class="error"><strong>CSW Server Broken</strong> - 'https://data.noaa.gov/csw' has been omitted because it is not working.  See: https://github.com/ioos/system-test/issues/130</div>
 
 # <markdowncell>
 
@@ -126,7 +122,7 @@ from owslib import fes
 
 cf_name_filters = []
 for cf_name in variables_to_query:
-    text_filter   = fes.PropertyIsLike(propertyname='AnyText', literal="*%s*" % cf_name, wildCard='*')
+    text_filter   = fes.PropertyIsLike(propertyname='apiso:AnyText', literal="*%s*" % cf_name, wildCard='*')
     cf_name_filters.append(text_filter)
 
 # <markdowncell>
@@ -134,8 +130,6 @@ for cf_name in variables_to_query:
 # #### Query each CSW catalog for the cf_name_filters constructed above
 
 # <codecell>
-
-#This cell searches the endpoints using the revised list of variable strings from the previous cell and returns basic information on the number of records and the titles of data sets available via each endpoint
 
 from owslib.csw import CatalogueServiceWeb
 from utilities import normalize_service_urn
@@ -157,8 +151,8 @@ for x in range(len(cf_name_filters)):
                                   server=url,
                                   title=record.title())
                     var_results.append(result)
-        except BaseException as e:
-            print "- FAILED: %s - %s" % (url, e.msg)
+        except BaseException, e:
+            print "- FAILED: %s - %s" % (url, e)
 
 # <markdowncell>
 
@@ -187,11 +181,11 @@ df = df.drop_duplicates()
 # <codecell>
 
 by_variable = pd.DataFrame(df.groupby("variable").size(), columns=("Number of services",))
-by_variable.sort('Number of services', ascending=False).plot(kind="barh", figsize=(10,6,))
+by_variable.sort('Number of services', ascending=False).plot(kind="barh", figsize=(10,8,))
 
 # <markdowncell>
 
-# #### The number of service types for each model type
+# #### The number of service types for each variable
 
 # <codecell>
 
@@ -200,18 +194,29 @@ import math
 var_service_summary = pd.DataFrame(df.groupby(["variable", "scheme"], sort=True).size(), columns=("Number of services",))
 #HTML(model_service_summary.to_html())
 var_service_plotter = var_service_summary.unstack("variable")
-var_service_plot = var_service_plotter.plot(kind='barh', subplots=True, figsize=(12,34,), sharey=True)
+var_service_plot = var_service_plotter.plot(kind='barh', subplots=True, figsize=(12,120), sharey=True)
 
 # <markdowncell>
 
-# #### Services per CSW server
+# #### Variabes per CSW server
 
 # <codecell>
 
-services_per_csw = pd.DataFrame(df.groupby(["variable", "server"]).size(), columns=("Number of services",))
+variables_per_csw = pd.DataFrame(df.groupby(["variable", "server"]).size(), columns=("Number of services",))
 #HTML(records_per_csw.to_html())
-var_csw_plotter = services_per_csw.unstack("variable")
+var_csw_plotter = variables_per_csw.unstack("variable")
 var_csw_plot = var_csw_plotter.plot(kind='barh', subplots=True, figsize=(12,30,), sharey=True)
+
+# <markdowncell>
+
+# #### Variables per CSW server
+
+# <codecell>
+
+csws_per_variable = pd.DataFrame(df.groupby(["variable", "server"]).size(), columns=("Number of variables",))
+#HTML(records_per_csw.to_html())
+csw_var_plotter = csws_per_variable.unstack("server")
+csw_var_plot = csw_var_plotter.plot(kind='barh', subplots=True, figsize=(12,30,), sharey=True)
 
 # <codecell>
 
