@@ -179,9 +179,3 @@ records_per_csw = pd.DataFrame(normalized_urns.groupby(["scheme", "server"]).siz
 model_csw_plotter = records_per_csw.unstack("server")
 model_csw_plot = model_csw_plotter.plot(kind='barh', subplots=True, figsize=(12,30,), sharey=True)
 
-# <codecell>
-
-
-# <codecell>
-
-
