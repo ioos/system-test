@@ -280,6 +280,15 @@ lat_center = abs(bounding_box[3]-bounding_box[1])/2 + bounding_box[1]
 lon_center = abs(bounding_box[0]-bounding_box[2])/2 + bounding_box[0]
 m = folium.Map(location=[lat_center, lon_center], zoom_start=6)
 
+# Add WMS layer for water temperature
+m.add_wms_layer(wms_name="Daily Gridded Global Sea Surface Temperature Analysis",
+                  wms_url="http://nowcoast.noaa.gov/wms/com.esri.wms.Esrimap/analyses?service=wms&version=1.1.1&request=GetCapabilities",
+                  wms_format="image/png",
+                  wms_layers= "NCEP_RAS_ANAL_RTG_SST"
+                  )    
+    
+m.add_layers_to_map()
+
 n = 0
 for df in obs_df:
     #get the station data from the sos end point
