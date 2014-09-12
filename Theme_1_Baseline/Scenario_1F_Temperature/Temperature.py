@@ -256,7 +256,8 @@ for get_caps_url in sos_urls:
         raw_df = get_NERACOOS_SOS_data(get_caps_url, 'http://mmisw.org/ont/cf/parameter/sea_water_temperature', iso_start, iso_end)
         if not raw_df.empty:
             col = 'Observed Data'
-            concatenated = pd.concat([raw_df, ts], axis=1)[col]
+#             concatenated = pd.concat([raw_df, ts], axis=1)[col]
+            concatenated = raw_df.merge(ts, how='outer', left_index=True, right_index=True)
             obs_df.append(pd.DataFrame(concatenated))
             obs_df[-1].name = raw_df.name
             obs_df[-1].provider = raw_df.provider
@@ -411,7 +412,8 @@ for url in dap_urls:
     except (ValueError, RuntimeError, CoordinateNotFoundError,
             ConstraintMismatchError) as e:
         warn("\n%s\n" % e)
-        pass
+    except MemoryError as e:
+        warn("Ran out of memory while attempting to load model '%s'! %s\n" % (url, e))
 
 # <markdowncell>
 
@@ -424,8 +426,7 @@ for url in dap_urls:
 
 # <codecell>
 
-count = 0
-for df in obs_df:
+for count, df in enumerate(obs_df):
     if not model_df[count].empty and not df.empty:
         fig, ax = plt.subplots(figsize=(20,5))
         
@@ -438,8 +439,6 @@ for df in obs_df:
         ax.set_ylabel('Sea Water Temperature (C)')
         ax.legend(loc='right')
         plt.show()
-
-    count += 1
 
 # <markdowncell>
 
@@ -457,11 +456,12 @@ nc_ds = netCDF4.Dataset(url)
 time  = nc_ds.variables['time']
 lat  = nc_ds.variables['lat_rho'][:]
 lon  = nc_ds.variables['lon_rho'][:]
+nc_ds.close()
 
 # Now flatten the lat lon arrays to 1-D
 flat_lat = [x for sublist in lat for x in sublist]
 flat_lon = [x for sublist in lon for x in sublist]
-nc_ds.close()
+
 
 for lat, lon in zip(flat_lat, flat_lon):
     if (lon > bounding_box[0] and lon < bounding_box[2]) and (lat > bounding_box[1] and lat < bounding_box[3]):
