@@ -9,7 +9,8 @@ import re
 import os
 import pandas as pd
 import json
-
+import sys
+from netCDF4 import date2num
 non_decimal = re.compile(r'[^\d.]+')
 
 url = 'http://ga.water.usgs.gov/flood/hurricane/irene/sites/datafiles/'
@@ -107,9 +108,13 @@ for file_name in files:
                         else:
                             if '.' in data_row:
                                 data_row[0] = data_row[0].split('.')[0]
-                                
-                            dt = datetime.datetime.strptime(data_row[0], '%m-%d-%Y %H:%M:%S')
-                            actual_data['dates'].append(dt) 
+                            
+                            try:
+                                dt = datetime.datetime.strptime(data_row[0], '%m-%d-%Y %H:%M:%S')
+                                actual_data['dates'].append(dt) 
+                            except:
+                                dt = datetime.datetime.strptime(data_row[0], '%m-%d-%Y %H:%M:%S.%f')
+                                actual_data['dates'].append(dt)                                 
 
                             for i in range(1,len(data_row)):
                                 try:
@@ -127,10 +132,16 @@ for file_name in files:
 
 print titles
 
+for t in full_data:
+    d_len = len(full_data[t]['data']['dates'])
+    if d_len > 608090:
+        print t
+    
+
 # <codecell>
 
 num = 0
-df = pd.DataFrame(data=full_data[full_data.keys()[num]]['data'],index=full_data[full_data.keys()[num]]['data']['dates'],columns = titles )    
+df = pd.DataFrame(data=full_data['SSS-NC-CRT-008WL.txt']['data'],index=full_data['SSS-NC-CRT-008WL.txt']['data']['dates'],columns = titles )    
 
 # <codecell>
 
@@ -180,9 +191,103 @@ inline_map(map)
 
 # <codecell>
 
+sys.getsizeof(full_data)
 
 # <codecell>
 
+
+full_dates = []
+
+for t in full_data:
+    d_len = len(full_data[t]['data']['dates'])
+    date_list = []
+    date_list = full_data[t]['data']['dates']
+    try:
+        times = date2num(date_list,units='seconds since 1970-1-1',calendar='gregorian')
+    except:        
+        pass
+    full_dates.extend(times[:])
+
+# <codecell>
+
+print len(full_dates)
+lat_list = []
+lon_list = []
+st_name = []
+full_st_data = np.empty([len(full_dates), len(full_data)])
+for j,st in enumerate(full_data):
+    lat =  full_data[st]['meta']['lat']
+    lat_list.append(lat)
+    lon = full_data[st]['meta']['lon']
+    lon_list.append(lon)
+    name = st.split('.')[0]
+    name = name.split('-')
+    st_name.append(name)   
+    
+    date_list = full_data[t]['data']['dates']
+    try:
+        times = date2num(date_list,units='seconds since 1970-1-1',calendar='gregorian')
+    except e:
+        print 'error:',e
+    
+    print len(times)
+    for i,ttt in enumerate(times):
+        #gets new
+        idx = numpy.where(full_dates==ttt)
+        #get current
+        data_cell = full_data[st]['data']['elevation'][i]       
+        #sets the value
+        full_st_data[idx[0][0],j] = data_cell
+    break
+
+# <codecell>
+
+print "asdasdasd"
+
+# <codecell>
+
+import netCDF4
+
+full_dates = np.sort(full_dates)
+full_dates = (np.unique(full_dates))
+print len(full_dates)
+
+ncfile = netCDF4.Dataset('new.nc','w')
+print "-- Created file"
+
+station_dim = ncfile.createDimension('station', len(full_data.keys()))     # latitude axis
+time_dim = ncfile.createDimension('time', 0)   # unlimited axis
+
+#SETUP
+#
+lat = ncfile.createVariable('lat', 'f4', ('station',))
+lat.units = 'degrees_north'
+lat.standard_name = 'latitude'
+lat[:] = lat_list
+#
+lon = ncfile.createVariable('lon', 'f4', ('station',))
+lon.units = 'degrees_east'
+lon.standard_name = 'longitude'
+lon[:] = lon_list
+#
+time = ncfile.createVariable('time', 'f4', ('time',))
+time.units = 'seconds since 1970-1-1'
+time.standard_name = 'time'
+time.calendar='gregorian'
+time[:] = full_dates
+#
+station = ncfile.createVariable('station','b',('station'))
+station.units = ''
+station.standard_name = 'station id'
+#station[:] = st_name
+
+elev = ncfile.createVariable('elevation','f4',('time','station'))
+elev.units = 'ft'
+elev.standard_name = 'Sensor elevation above NAVD 88'
+
+#CLOSE
+ncfile.close()
+print "-- File closed successfully"
 
 # <codecell>
 
