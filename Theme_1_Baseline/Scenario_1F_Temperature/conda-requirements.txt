@@ -1,0 +1,9 @@
+pandas
+numpy
+matplotlib
+OWSLib
+lxml
+pyoos
+cython
+Pillow
+iris

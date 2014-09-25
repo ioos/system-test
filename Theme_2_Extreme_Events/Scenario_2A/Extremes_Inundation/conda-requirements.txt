@@ -1,0 +1,12 @@
+pandas
+numpy
+matplotlib
+OWSLib
+netCDF4
+lxml
+pyoos
+git+https://github.com/wrobstory/folium.git#egg=folium
+cython
+pyshp
+cartopy
+pyke
