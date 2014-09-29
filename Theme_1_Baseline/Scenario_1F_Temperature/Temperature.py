@@ -426,7 +426,7 @@ for url in dap_urls:
 
 # <markdowncell>
 
-# <div class="warning"><strong>Some models can't be extracted by IRIS</strong> <br>The [USEAST ROMS model](http://omgsrv1.meas.ncsu.edu:8080/thredds/dodsC/fmrc/us_east/US_East_Forecast_Model_Run_Collection_best.ncd.html) can't be loaded because of an error reading the time units (units: hours since 2014-07-10T00:00:00Z) 
+# <div class="warning"><strong>Some models can't be extracted by IRIS</strong>
 # <br> The [UMASS Dartmouth FVCOM model](http://www.smast.umassd.edu:8080/thredds/dodsC/FVCOM/NECOFS/Forecasts/NECOFS_FVCOM_OCEAN_MASSBAY_FORECAST.nc.html) cannot be read becasue it has 2 dimensions for ocean_sigma coordinate  </div>
 
 # <markdowncell>
