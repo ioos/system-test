@@ -2,7 +2,7 @@
 
 ## Scenario 2A - Coastal Inundation
 
-### Model Data Comparison - Winds
+### Extremes - Winds
 
 #### Requirements
 
