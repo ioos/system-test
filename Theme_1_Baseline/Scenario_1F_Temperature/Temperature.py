@@ -331,6 +331,20 @@ constraint = iris.Constraint(cube_func=name_in_list)
 
 # <codecell>
 
+def z_coord(cube):
+    """Heuristic way to return the dimensionless vertical coordinate."""
+    try:
+        z = cube.coord(axis='Z')
+    except CoordinateNotFoundError:
+        z = cube.coords(axis='Z')
+        for coord in cube.coords(axis='Z'):
+            if coord.ndim == 1:
+                z = coord
+    return z
+
+
+# <codecell>
+
 # Create list of model DataFrames for each station
 model_df = []
 for df in obs_df:
@@ -370,6 +384,16 @@ for url in dap_urls:
                 print('[Structured grid model]:', url)
 #                 zc = a.coord(axis='Z').points
 #                 zlev = max(enumerate(zc),key=itemgetter(1))[0]
+                z = z_coord(a)
+                if z:
+                    positive = z.attributes.get('positive', None)
+                    if positive == 'up':
+                        zlev = np.unique(z.points.argmax(axis=0))[0]
+                    else:
+                        zlev = np.unique(z.points.argmin(axis=0))[0]
+#                     c = cube[idx, ...].copy()
+                else:
+                    zlev = None
                 positive = a.coord(axis='Z').attributes.get('positive', None)
                 if positive == 'up':
                     zlev = np.argmax(a.coord(axis='Z').points)
@@ -396,12 +420,21 @@ for url in dap_urls:
                 print('[Unstructured grid model]:', url)
 #                 zc = a.coord(axis='Z').points
 #                 zlev = max(enumerate(zc),key=itemgetter(1))[0]
-                positive = a.coord(axis='Z').attributes.get('positive', None)
-                if positive == 'up':
-                    zlev = np.argmax(a.coord(axis='Z').points)
+#                 positive = a.coord(axis='Z').attributes.get('positive', None)
+#                 if positive == 'up':
+#                     zlev = np.argmax(a.coord(axis='Z').points)
+#                 else:
+#                     zlev = np.argmin(a.coord(axis='Z').points)
+                z = z_coord(a)
+                if z:
+                    positive = z.attributes.get('positive', None)
+                    if positive == 'up':
+                        zlev = np.unique(z.points.argmax(axis=0))[0]
+                    else:
+                        zlev = np.unique(z.points.argmin(axis=0))[0]
+#                     c = cube[idx, ...].copy()
                 else:
-                    zlev = np.argmin(a.coord(axis='Z').points)
-                
+                    zlev = None
                 # Find the closest point from an unstructured grid model.
                 index, dd = nearxy(lon.flatten(), lat.flatten(),
                                    obs_lon, obs_lat)
