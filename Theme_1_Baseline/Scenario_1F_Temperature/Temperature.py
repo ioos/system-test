@@ -42,7 +42,7 @@ import netCDF4
 from IPython.display import HTML
 import iris
 from iris.exceptions import CoordinateNotFoundError, ConstraintMismatchError
-# iris.FUTURE.netcdf_promote = True
+iris.FUTURE.netcdf_promote = True
 import matplotlib.pyplot as plt
 from owslib.csw import CatalogueServiceWeb
 from owslib import fes
@@ -456,11 +456,6 @@ for url in dap_urls:
         warn("\n%s\n" % e)
     except MemoryError as e:
         warn("Ran out of memory while attempting to load model '%s'! %s\n" % (url, e))
-
-# <markdowncell>
-
-# <div class="warning"><strong>Some models can't be extracted by IRIS</strong>
-# <br> The [UMASS Dartmouth FVCOM model](http://www.smast.umassd.edu:8080/thredds/dodsC/FVCOM/NECOFS/Forecasts/NECOFS_FVCOM_OCEAN_MASSBAY_FORECAST.nc.html) cannot be read becasue it has 2 dimensions for ocean_sigma coordinate  </div>
 
 # <markdowncell>
 
