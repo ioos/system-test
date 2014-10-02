@@ -474,7 +474,7 @@ for count, df in enumerate(obs_df):
 #         df['Observed Data'].resample('H', how='mean').plot(ax=ax, title=df.name, color='k', linewidth=2, legend=True)
         df['Observed Data'].plot(ax=ax, title=df.name, color='k', linewidth=2, legend=True)
         ax.set_ylabel('Sea Water Temperature (C)')
-        ax.legend(loc='right')
+        ax.legend(loc='best')
         plt.show()
 
 # <markdowncell>
