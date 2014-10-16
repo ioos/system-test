@@ -10,6 +10,13 @@ css_styles()
 
 # # IOOS System Test - Theme 1 - Scenario A - [Description](https://github.com/ioos/system-test/wiki/Development-of-Test-Themes#theme-1-baseline-assessment)
 # 
+# A researcher new to IOOS wishes to find out what information is available for further research. 
+# Queries are created to determine  how much time series information is available on common, core 
+# oceanographic variables such as  wind speed and direction, wave height and duration,  water 
+# temperature and salinity at different depths, current speed and direction, 
+# where this information resides, and whether this information can be used as input to a few of the 
+# most common data models.
+# 
 # ## Model Strings
 # 
 # ## Questions
@@ -171,7 +178,4 @@ records_per_csw = pd.DataFrame(normalized_urns.groupby(["scheme", "server"]).siz
 #HTML(records_per_csw.to_html())
 model_csw_plotter = records_per_csw.unstack("server")
 model_csw_plot = model_csw_plotter.plot(kind='barh', subplots=True, figsize=(12,30,), sharey=True)
-
-# <codecell>
-
 
