@@ -1,0 +1,6 @@
+pandas
+OWSLib
+matplotlib
+iris
+sparqlwrapper
+rdflib-jsonld

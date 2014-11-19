@@ -4,4 +4,3 @@
 *.ipynb_checkpoints
 *-checkpoint.ipynb
 *.db
-*.txt
