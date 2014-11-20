@@ -39,7 +39,6 @@ from warnings import warn
 from io import BytesIO
 import folium
 import netCDF4
-from IPython.display import HTML
 import iris
 from iris.exceptions import CoordinateNotFoundError, ConstraintMismatchError
 iris.FUTURE.netcdf_promote = True
@@ -48,10 +47,9 @@ from owslib.csw import CatalogueServiceWeb
 from owslib import fes
 import pandas as pd
 from pyoos.collectors.coops.coops_sos import CoopsSos
-from operator import itemgetter
 
 from utilities import (fes_date_filter, collector2df, find_timevar, find_ij, nearxy, service_urls, mod_df, 
-                       get_coordinates, get_station_longName, get_NERACOOS_SOS_data, inline_map, css_styles)
+                       get_coordinates, get_NERACOOS_SOS_data, inline_map, css_styles)
 
 css_styles()
 
@@ -61,7 +59,7 @@ css_styles()
 
 # <headingcell level=4>
 
-# Speficy Temporal and Spatial conditions
+# Specify Temporal and Spatial conditions
 
 # <codecell>
 
@@ -332,16 +330,15 @@ constraint = iris.Constraint(cube_func=name_in_list)
 # <codecell>
 
 def z_coord(cube):
-    """Heuristic way to return the dimensionless vertical coordinate."""
+    """Heuristic way to return **one** the vertical coordinate."""
     try:
         z = cube.coord(axis='Z')
     except CoordinateNotFoundError:
-        z = cube.coords(axis='Z')
+        z = None
         for coord in cube.coords(axis='Z'):
-            if coord.ndim == 1:
+            if coord.name() not in water_level:
                 z = coord
     return z
-
 
 # <codecell>
 
@@ -496,29 +493,30 @@ lon  = nc_ds.variables['lon_rho'][:]
 nc_ds.close()
 
 # Now flatten the lat lon arrays to 1-D
-flat_lat = [x for sublist in lat for x in sublist]
-flat_lon = [x for sublist in lon for x in sublist]
-
-
-for lat, lon in zip(flat_lat, flat_lon):
-    if (lon > bounding_box[0] and lon < bounding_box[2]) and (lat > bounding_box[1] and lat < bounding_box[3]):
-        m.circle_marker([lat, lon]) #popup=str(lat)+','+str(lon))
+flat_lat = lat.flatten()
+flat_lon = lon.flatten()
 
 # Now overlay the obs stattions                
 n = 0
 for df in obs_df:
     #get the station data from the sos end point
     longname = df.name
-    lat = obs_lat[n]
-    lon = obs_lon[n]
+    station_lat = obs_lat[n]
+    station_lon = obs_lon[n]
     if 'NERACOOS' in df.provider:
         color = 'purple'
     else:
         color = 'blue'
     popup_string = ('<b>Station:</b><br>'+ str(longname))
-    m.simple_marker([lat, lon], popup=popup_string, marker_color=color)
+    m.simple_marker([station_lat, station_lon], popup=popup_string, marker_color=color)
     n += 1
     
+    # Now plot the model grid points near the station
+    dist = np.sqrt((flat_lat-station_lat)**2 + (flat_lon-station_lon)**2)
+    ind = np.where( dist < 0.2)[0]
+    for ii in ind:
+        m.circle_marker([flat_lat[ii], flat_lon[ii]]) #popup=str(lat)+','+str(lon))
+
 m.line(get_coordinates(bounding_box,bounding_box_type), line_color='#FF0000', line_weight=5)
 
 inline_map(m)
