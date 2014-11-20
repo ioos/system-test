@@ -7,7 +7,7 @@
 1. Using `pip`
     ```bash
     pip install -r pip-requirements.txt
-    pip install git+https://github.com/birdage/folium.git@clustered_markers#egg=folium
+    pip install git+https://github.com/birdage/folium.git@color_markers#egg=folium --upgrade
     pip install git+https://github.com/SciTools/cartopy.git@v0.10.0
     pip install git+https://github.com/SciTools/iris.git@v1.6.1
     ```
@@ -16,19 +16,16 @@
     ```bash
     conda install --file conda-requirements.txt
     conda install -c https://conda.binstar.org/rsignell iris
-    conda install -c https://conda.binstar.org/rsignell pyoos
     ```
     If you are using environments within conda, be sure to specify it
     ```bash
     conda install -n yourenvname --file conda-requirements.txt
     conda install -n yourenvname -c https://conda.binstar.org/rsignell iris
-    conda install -n yourenvname -c https://conda.binstar.org/rsignell pyoos
 
     ```
     
     You will still have to pip install folium
-    pip install git+https://github.com/birdage/folium.git@clustered_markers#egg=folium
-
+    pip install git+https://github.com/birdage/folium.git@color_markers#egg=folium --upgrade
 
 #### Helper methods
 

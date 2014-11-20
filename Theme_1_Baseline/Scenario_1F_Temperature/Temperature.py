@@ -39,19 +39,17 @@ from warnings import warn
 from io import BytesIO
 import folium
 import netCDF4
-from IPython.display import HTML
 import iris
 from iris.exceptions import CoordinateNotFoundError, ConstraintMismatchError
-# iris.FUTURE.netcdf_promote = True
+iris.FUTURE.netcdf_promote = True
 import matplotlib.pyplot as plt
 from owslib.csw import CatalogueServiceWeb
 from owslib import fes
 import pandas as pd
 from pyoos.collectors.coops.coops_sos import CoopsSos
-from operator import itemgetter
 
 from utilities import (fes_date_filter, collector2df, find_timevar, find_ij, nearxy, service_urls, mod_df, 
-                       get_coordinates, get_station_longName, get_NERACOOS_SOS_data, inline_map, css_styles)
+                       get_coordinates, get_NERACOOS_SOS_data, inline_map, css_styles)
 
 css_styles()
 
@@ -61,7 +59,7 @@ css_styles()
 
 # <headingcell level=4>
 
-# Speficy Temporal and Spatial conditions
+# Specify Temporal and Spatial conditions
 
 # <codecell>
 
@@ -331,6 +329,19 @@ constraint = iris.Constraint(cube_func=name_in_list)
 
 # <codecell>
 
+def z_coord(cube):
+    """Heuristic way to return **one** the vertical coordinate."""
+    try:
+        z = cube.coord(axis='Z')
+    except CoordinateNotFoundError:
+        z = None
+        for coord in cube.coords(axis='Z'):
+            if coord.name() not in water_level:
+                z = coord
+    return z
+
+# <codecell>
+
 # Create list of model DataFrames for each station
 model_df = []
 for df in obs_df:
@@ -370,6 +381,16 @@ for url in dap_urls:
                 print('[Structured grid model]:', url)
 #                 zc = a.coord(axis='Z').points
 #                 zlev = max(enumerate(zc),key=itemgetter(1))[0]
+                z = z_coord(a)
+                if z:
+                    positive = z.attributes.get('positive', None)
+                    if positive == 'up':
+                        zlev = np.unique(z.points.argmax(axis=0))[0]
+                    else:
+                        zlev = np.unique(z.points.argmin(axis=0))[0]
+#                     c = cube[idx, ...].copy()
+                else:
+                    zlev = None
                 positive = a.coord(axis='Z').attributes.get('positive', None)
                 if positive == 'up':
                     zlev = np.argmax(a.coord(axis='Z').points)
@@ -396,12 +417,21 @@ for url in dap_urls:
                 print('[Unstructured grid model]:', url)
 #                 zc = a.coord(axis='Z').points
 #                 zlev = max(enumerate(zc),key=itemgetter(1))[0]
-                positive = a.coord(axis='Z').attributes.get('positive', None)
-                if positive == 'up':
-                    zlev = np.argmax(a.coord(axis='Z').points)
+#                 positive = a.coord(axis='Z').attributes.get('positive', None)
+#                 if positive == 'up':
+#                     zlev = np.argmax(a.coord(axis='Z').points)
+#                 else:
+#                     zlev = np.argmin(a.coord(axis='Z').points)
+                z = z_coord(a)
+                if z:
+                    positive = z.attributes.get('positive', None)
+                    if positive == 'up':
+                        zlev = np.unique(z.points.argmax(axis=0))[0]
+                    else:
+                        zlev = np.unique(z.points.argmin(axis=0))[0]
+#                     c = cube[idx, ...].copy()
                 else:
-                    zlev = np.argmin(a.coord(axis='Z').points)
-                
+                    zlev = None
                 # Find the closest point from an unstructured grid model.
                 index, dd = nearxy(lon.flatten(), lat.flatten(),
                                    obs_lon, obs_lat)
@@ -426,11 +456,6 @@ for url in dap_urls:
 
 # <markdowncell>
 
-# <div class="warning"><strong>Some models can't be extracted by IRIS</strong> <br>The [USEAST ROMS model](http://omgsrv1.meas.ncsu.edu:8080/thredds/dodsC/fmrc/us_east/US_East_Forecast_Model_Run_Collection_best.ncd.html) can't be loaded because of an error reading the time units (units: hours since 2014-07-10T00:00:00Z) 
-# <br> The [UMASS Dartmouth FVCOM model](http://www.smast.umassd.edu:8080/thredds/dodsC/FVCOM/NECOFS/Forecasts/NECOFS_FVCOM_OCEAN_MASSBAY_FORECAST.nc.html) cannot be read becasue it has 2 dimensions for ocean_sigma coordinate  </div>
-
-# <markdowncell>
-
 # ### Plot Modeled vs Obs Water Temperature
 
 # <codecell>
@@ -446,7 +471,7 @@ for count, df in enumerate(obs_df):
 #         df['Observed Data'].resample('H', how='mean').plot(ax=ax, title=df.name, color='k', linewidth=2, legend=True)
         df['Observed Data'].plot(ax=ax, title=df.name, color='k', linewidth=2, legend=True)
         ax.set_ylabel('Sea Water Temperature (C)')
-        ax.legend(loc='right')
+        ax.legend(loc='best')
         plt.show()
 
 # <markdowncell>
@@ -468,29 +493,30 @@ lon  = nc_ds.variables['lon_rho'][:]
 nc_ds.close()
 
 # Now flatten the lat lon arrays to 1-D
-flat_lat = [x for sublist in lat for x in sublist]
-flat_lon = [x for sublist in lon for x in sublist]
-
-
-for lat, lon in zip(flat_lat, flat_lon):
-    if (lon > bounding_box[0] and lon < bounding_box[2]) and (lat > bounding_box[1] and lat < bounding_box[3]):
-        m.circle_marker([lat, lon]) #popup=str(lat)+','+str(lon))
+flat_lat = lat.flatten()
+flat_lon = lon.flatten()
 
 # Now overlay the obs stattions                
 n = 0
 for df in obs_df:
     #get the station data from the sos end point
     longname = df.name
-    lat = obs_lat[n]
-    lon = obs_lon[n]
+    station_lat = obs_lat[n]
+    station_lon = obs_lon[n]
     if 'NERACOOS' in df.provider:
         color = 'purple'
     else:
         color = 'blue'
     popup_string = ('<b>Station:</b><br>'+ str(longname))
-    m.simple_marker([lat, lon], popup=popup_string, marker_color=color)
+    m.simple_marker([station_lat, station_lon], popup=popup_string, marker_color=color)
     n += 1
     
+    # Now plot the model grid points near the station
+    dist = np.sqrt((flat_lat-station_lat)**2 + (flat_lon-station_lon)**2)
+    ind = np.where( dist < 0.2)[0]
+    for ii in ind:
+        m.circle_marker([flat_lat[ii], flat_lon[ii]]) #popup=str(lat)+','+str(lon))
+
 m.line(get_coordinates(bounding_box,bounding_box_type), line_color='#FF0000', line_weight=5)
 
 inline_map(m)
