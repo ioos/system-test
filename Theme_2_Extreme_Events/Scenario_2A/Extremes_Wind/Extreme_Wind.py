@@ -69,7 +69,7 @@ area = {'Hawaii': [-160.0, 18.0, -154., 23.0],
         'Arctic': [-179, 63, -140, 80],
         'North East': [-74, 40, -69, 42],
         'Virginia Beach': [-76, 34, -74, 38],
-        'San Diego': [-119, 32, -117, 33.5]}
+        'San Diego': [-121, 32, -115, 34]}
 
 bounding_box = area['San Diego']
 
@@ -205,6 +205,7 @@ coops_collector.server.identification.title
 coops_collector.filter(bbox=bounding_box, variables=data_dict["winds"]["sos_name"])
 
 response = coops_collector.raw(responseFormat="text/csv")
+
 obs_loc_df = pd.read_csv(BytesIO(response.encode('utf-8')),
                          parse_dates=True,
                          index_col='date_time')
