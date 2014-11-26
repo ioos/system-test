@@ -19,7 +19,7 @@ import unittest
 class RunNotebooks(unittest.TestCase):
     def setUp(self):
         files = []
-        path = os.path.abspath(os.path.join(os.getcwd(), os.pardir))
+        path = os.path.abspath(os.path.join(os.getcwd(), os.pardir, os.pardir))
         for root, dirs, fnames in os.walk(path):
             for fname in fnames:
                 if fname.endswith(".ipynb"):
