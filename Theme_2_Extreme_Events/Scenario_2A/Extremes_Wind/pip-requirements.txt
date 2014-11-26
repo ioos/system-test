@@ -1,0 +1,6 @@
+OWSLib
+folium
+matplotlib
+pandas
+pyoos
+scipy
