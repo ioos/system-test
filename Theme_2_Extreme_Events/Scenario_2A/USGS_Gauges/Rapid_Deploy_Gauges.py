@@ -324,7 +324,10 @@ bpz = np.array(bpz)*10
 pts = ax.scatter(x, y, c=zz, s=bpz)
 ax.set_xlabel('Lon')
 ax.set_ylabel('Lat')
-ax.set_title("Plot Showing Locations of Maximum Water Level\nColor coded by Maximum water level(ft)\n Sized by barometric pressure (psi)")
+ax.set_title("Plot Showing Locations of Maximum Water Level\nColor coded by Maximum water level (ft)\n Sized by barometric pressure (psi)")
 cb = fig.colorbar(pts)
 plt.show()
+
+# <codecell>
+
 
