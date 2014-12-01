@@ -172,7 +172,7 @@ print "Data Fields:",titles
 
 # <codecell>
 
-#remove 'Sensor elevation above NAVD 88 ='     
+#remove 'Sensor elevation above NAVD 88 (ft)'     
 for i in range(0, len(full_data.keys())):
     data = full_data[full_data.keys()[i]]['data']     
     meta_elev = full_data[full_data.keys()[i]]['meta']['elevation']                            
@@ -194,7 +194,7 @@ for i in range(0, len(full_data.keys())):
             df = pd.DataFrame(data=data,index=data['dates'],columns = titles )    
             plt.plot(df.index, df[titles[1]])
             plt.xlabel('Date', fontsize=14)
-            plt.ylabel(titles[1]+' m', fontsize=14) 
+            plt.ylabel(titles[1]+' (ft)', fontsize=14) 
     except Exception, e:
         print e
         pass
@@ -217,7 +217,7 @@ for i in range(0, len(full_data.keys())):
             plt.plot(df.index, df[titles[2]])
 
             plt.xlabel('Date', fontsize=14)
-            plt.ylabel(titles[2]+' m', fontsize=14) 
+            plt.ylabel(titles[2], fontsize=14) 
     except Exception, e:
         print e
         pass
@@ -265,7 +265,7 @@ dt = []
 dv = []
 
 fig = plt.figure(figsize=(16, 3))
-fig.suptitle('Max Water Level (m), 2011', fontsize=14)
+fig.suptitle('Max Water Level (ft), 2011', fontsize=14)
 for i in range(0, len(full_data.keys())):
     num = i
     z = np.array(full_data[full_data.keys()[num]]['data']['elevation'])
@@ -282,7 +282,7 @@ for i in range(0, len(full_data.keys())):
     
     plt.scatter(df.index,df['elevation'])
     plt.xlabel('Date', fontsize=14)
-    plt.ylabel('Water Level'+' m', fontsize=14) 
+    plt.ylabel('Water Level'+' (ft)', fontsize=14) 
 
 
 ax = plt.gca()
@@ -324,7 +324,7 @@ bpz = np.array(bpz)*10
 pts = ax.scatter(x, y, c=zz, s=bpz)
 ax.set_xlabel('Lon')
 ax.set_ylabel('Lat')
-ax.set_title("Plot Showing Locations of Maximum Water Level\nColor coded by Maximum water level(m)\n Sized by barometric pressure (psi)")
+ax.set_title("Plot Showing Locations of Maximum Water Level\nColor coded by Maximum water level(ft)\n Sized by barometric pressure (psi)")
 cb = fig.colorbar(pts)
 plt.show()
 
