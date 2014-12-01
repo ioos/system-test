@@ -1,61 +1,95 @@
 # -*- coding: utf-8 -*-
 # <nbformat>3.0</nbformat>
 
+# <markdowncell>
+
+# ># IOOS System Test: Rapid Deployment gages from USGS
+# 
+# ###Can we obtain water level data from the rapid deployment gages, deployment for Hurricane Irene? 
+# This notebook is based on IOOS System Test: Inundation
+# 
+# #### Methodology:
+# 
+# * USGS gage data (ASCII Text Files) obtained from http://ga.water.usgs.gov/flood/hurricane/irene/sites/datafiles/ and 90% of data zipped up for use in the notebook (large files were removed for efficiency)
+# * Data Automatically gets unzipped
+# * Process data files, and store data in dictionary for access
+# * Plot Water level data for the New Jersey area
+# * Plot Barometric pressure data for the New Jersey area
+# * Plot Gage Locations on a map, overlaid with the Hurricane Irene track line
+# * Plot time series of maximum waterlevel
+# * Plot locations of maximum waterlevel
+
+# <markdowncell>
+
+# ### import required libraries
+
 # <codecell>
 
 from bs4 import BeautifulSoup
 import requests
 import re
-import os
+import csv
+import os,zipfile
 import pandas as pd
 import json
 import sys
+import uuid
 from netCDF4 import date2num
-non_decimal = re.compile(r'[^\d.]+')
+from IPython.display import HTML, Javascript, display
+import folium
+import numpy as np
+from mpl_toolkits.mplot3d import Axes3D
+import matplotlib.pyplot as plt
+import matplotlib.dates as md
 
-url = 'http://ga.water.usgs.gov/flood/hurricane/irene/sites/datafiles/'
-r = requests.get(url)
+from utilities import (css_styles,inline_map)
+css_styles()
 
-soup = BeautifulSoup(r.text)
+# <markdowncell>
 
-# <codecell>
-
-def processTextFile(url,file_name,data_file_type):
-    print url+file_name
-    r = requests.get(url+file_name)
-    contents = r.text
-    file_name = "./data_files/"+file_name.split('.text')[0] 
-    f = open(file_name,'w')
-    f.write(contents)
-    f.close()
-    return file_name
+# <div class="success"><strong>Extract Data </strong> - Does the data dir exist, if not extract it </div>
+# 
 
 # <codecell>
 
-wl_count = 0
-file_name_list = []
-for link in soup.findAll('a'):
-    html_link = link.get('href')
-    if html_link.endswith("BP.txt"):
-        #processTextFile(url,html_link,'bp')
-        pass
-    elif html_link.endswith("WL.txt"):
-        #file_name_list.append(processTextFile(url,html_link,'wl'))
-        wl_count+=1
-print "num water level:",wl_count
+def unzip(source_filename, dest_dir):
+    with zipfile.ZipFile(source_filename) as zf:
+        zf.extractall(dest_dir)
+
+# <codecell>
+
+if (os.path.isdir("./data_files/")):
+    pass
+else:
+    print "Data Dir does not exist...extracting"
+    unzip('sample_data_files.zip','./')
 
 # <codecell>
 
 files = os.listdir('./data_files/') 
-print len(files)
+print "Water Level Files:",len(files)
+non_decimal = re.compile(r'[^\d.]+')
+
+# <markdowncell>
+
+# <div class="info"><strong>Process Data </strong> - Read the data files and create a dict of the fields </div>
 
 # <codecell>
 
+divid = str(uuid.uuid4())
+
+pb = HTML(
+"""
+<div style="border: 1px solid black; width:500px">
+  <div id="%s" style="background-color:blue; width:0%%">&nbsp;</div>
+</div> 
+""" % divid)
+
 count =0
 full_data = {}
-
-for file_name in files:
-    print count,file_name
+display(pb)
+for fi,file_name in enumerate(files):
+    #print count,file_name
     count+=1
 
     actual_data = {'dates':[]}
@@ -127,167 +161,174 @@ for file_name in files:
                     break
 
         full_data[file_name] = {'meta': meta_data,'data': actual_data}
+        percent_complete = ((float(fi+1)/float(len(files)))*100.)
+        display(Javascript("$('div#%s').width('%i%%')" % (divid, int(percent_complete))))
+
+# <markdowncell>
+
+# #### Show the available fields from the processed data files
 
 # <codecell>
 
-print titles
-
-for t in full_data:
-    d_len = len(full_data[t]['data']['dates'])
-    if d_len > 608090:
-        print t
-    
+print "Data Fields:",titles
 
 # <codecell>
 
-num = 0
-df = pd.DataFrame(data=full_data['SSS-NC-CRT-008WL.txt']['data'],index=full_data['SSS-NC-CRT-008WL.txt']['data']['dates'],columns = titles )    
+#remove 'Sensor elevation above NAVD 88 ='     
+for i in range(0, len(full_data.keys())):
+    data = full_data[full_data.keys()[i]]['data']     
+    meta_elev = full_data[full_data.keys()[i]]['meta']['elevation']                            
+    data['elevation'] = np.array(data['elevation']) - float(meta_elev)            
+
+# <markdowncell>
+
+# ## Plot all Water Level data in the NJ area
 
 # <codecell>
-
 
 fig = plt.figure(figsize=(16, 3))
-plt.plot(df.index, df[titles[1]])
-fig.suptitle(titles[1], fontsize=14)
-plt.xlabel('Date', fontsize=14)
-plt.ylabel(titles[1]+' m', fontsize=14)  
+fig.suptitle('Water Elevation', fontsize=14)
+for i in range(0, len(full_data.keys())):
+    num = i
+    try:
+        if 'SSS-NJ' in full_data.keys()[num]:            
+            data = full_data[full_data.keys()[num]]['data']                     
+            df = pd.DataFrame(data=data,index=data['dates'],columns = titles )    
+            plt.plot(df.index, df[titles[1]])
+            plt.xlabel('Date', fontsize=14)
+            plt.ylabel(titles[1]+' m', fontsize=14) 
+    except Exception, e:
+        print e
+        pass
+
+# <markdowncell>
+
+# ## Plot all Pressure data in the NJ area
 
 # <codecell>
 
-full_data[full_data.keys()[num]]['meta']
+fig = plt.figure(figsize=(16, 3))
+fig.suptitle(titles[2], fontsize=14)
+for i in range(0, len(full_data.keys())):
+    num = i
+    try:
+        if 'SSS-NJ' in full_data.keys()[num]:
+            #print full_data[full_data.keys()[num]]['meta']
+            data = full_data[full_data.keys()[num]]['data']                        
+            df = pd.DataFrame(data=data,index=full_data[full_data.keys()[num]]['data']['dates'],columns = titles )    
+            plt.plot(df.index, df[titles[2]])
+
+            plt.xlabel('Date', fontsize=14)
+            plt.ylabel(titles[2]+' m', fontsize=14) 
+    except Exception, e:
+        print e
+        pass
+
+# <markdowncell>
+
+# ## Map the Gage locations
 
 # <codecell>
 
-from IPython.display import HTML
-import folium
+map = folium.Map(width=800,height=500,location=[30, -73], zoom_start=4)
 
-# <codecell>
+#generate the color map for the storms
+color_list = {"Tropical Storm":'#4AD200',
+              "Category 1 Hurricane":'#CFD900',
+              "Category 2 Hurricane":'#E16400',
+              "Category 3 Hurricane":'#ff0000'}
 
-def inline_map(map):
-    """
-    Embeds the HTML source of the map directly into the IPython notebook.
-    
-    This method will not work if the map depends on any files (json data). Also this uses
-    the HTML5 srcdoc attribute, which may not be supported in all browsers.
-    """
-    map._build_map()
-    return HTML('<iframe srcdoc="{srcdoc}" style="width: 100%; height: 510px; border: none"></iframe>'.format(srcdoc=map.HTML.replace('"', '&quot;')))
 
-# <codecell>
+#add the track line
+with open('track.csv', 'rb') as csvfile:
+    spamreader = csv.reader(csvfile, delimiter=',', quotechar='|')
+    for row in spamreader:
+        lat = row[2]
+        lon = row[3]
+        popup = row[0]+" : "+row[1] + "<br>"+ row[6]        
+        map.circle_marker([lat, lon], popup=popup, fill_color=color_list[row[6]], radius=10000, line_color='#000000')
 
-map = folium.Map(width=800,height=500,location=[44, -73], zoom_start=3)
-
-# <codecell>
-
+#add the station
 for st in full_data:
     lat =  full_data[st]['meta']['lat']
     lon = full_data[st]['meta']['lon']
     map.simple_marker([lat, lon], popup=st,clustered_marker=True)    
-
-# <codecell>
-
 map.add_layers_to_map()
+
 inline_map(map)  
 
-# <codecell>
+# <markdowncell>
 
-sys.getsizeof(full_data)
-
-# <codecell>
-
-
-full_dates = []
-
-for t in full_data:
-    d_len = len(full_data[t]['data']['dates'])
-    date_list = []
-    date_list = full_data[t]['data']['dates']
-    try:
-        times = date2num(date_list,units='seconds since 1970-1-1',calendar='gregorian')
-    except:        
-        pass
-    full_dates.extend(times[:])
+# ## Generate Plot Of Maximum Water Levels from each gage
 
 # <codecell>
 
-print len(full_dates)
-lat_list = []
-lon_list = []
-st_name = []
-full_st_data = np.empty([len(full_dates), len(full_data)])
-for j,st in enumerate(full_data):
-    lat =  full_data[st]['meta']['lat']
-    lat_list.append(lat)
-    lon = full_data[st]['meta']['lon']
-    lon_list.append(lon)
-    name = st.split('.')[0]
-    name = name.split('-')
-    st_name.append(name)   
+dt = []
+dv = []
+
+fig = plt.figure(figsize=(16, 3))
+fig.suptitle('Max Water Level (m), 2011', fontsize=14)
+for i in range(0, len(full_data.keys())):
+    num = i
+    z = np.array(full_data[full_data.keys()[num]]['data']['elevation'])
+    val = np.max(z)
+    idx = np.argmax(z)
+    t = np.array(full_data[full_data.keys()[num]]['data']['dates'])[idx]
     
-    date_list = full_data[t]['data']['dates']
-    try:
-        times = date2num(date_list,units='seconds since 1970-1-1',calendar='gregorian')
-    except e:
-        print 'error:',e
+    dt.append(t)
+    dv.append(val)
     
-    print len(times)
-    for i,ttt in enumerate(times):
-        #gets new
-        idx = numpy.where(full_dates==ttt)
-        #get current
-        data_cell = full_data[st]['data']['elevation'][i]       
-        #sets the value
-        full_st_data[idx[0][0],j] = data_cell
-    break
+    data_dict = {'elevation':dv,'dates':dt}
+    
+    df = pd.DataFrame(data=data_dict,index=dt,columns=['elevation','dates'])   
+    
+    plt.scatter(df.index,df['elevation'])
+    plt.xlabel('Date', fontsize=14)
+    plt.ylabel('Water Level'+' m', fontsize=14) 
+
+
+ax = plt.gca()
+plt.ylim((0,20))
+ax.xaxis.set_major_formatter(md.DateFormatter('%B,%d\n%H:%M'))
 
 # <codecell>
 
-print "asdasdasd"
+## Generate Plot of maximum water level and its location
 
 # <codecell>
 
-import netCDF4
+mpl.rcParams['legend.fontsize'] = 10
 
-full_dates = np.sort(full_dates)
-full_dates = (np.unique(full_dates))
-print len(full_dates)
+x = []
+y = []
+zz = []
+bpz = []
 
-ncfile = netCDF4.Dataset('new.nc','w')
-print "-- Created file"
+fig = plt.figure(figsize=(10, 10))
+ax = fig.add_subplot(111)
 
-station_dim = ncfile.createDimension('station', len(full_data.keys()))     # latitude axis
-time_dim = ncfile.createDimension('time', 0)   # unlimited axis
+for i in range(0, len(full_data.keys())):
+    num = i
 
-#SETUP
-#
-lat = ncfile.createVariable('lat', 'f4', ('station',))
-lat.units = 'degrees_north'
-lat.standard_name = 'latitude'
-lat[:] = lat_list
-#
-lon = ncfile.createVariable('lon', 'f4', ('station',))
-lon.units = 'degrees_east'
-lon.standard_name = 'longitude'
-lon[:] = lon_list
-#
-time = ncfile.createVariable('time', 'f4', ('time',))
-time.units = 'seconds since 1970-1-1'
-time.standard_name = 'time'
-time.calendar='gregorian'
-time[:] = full_dates
-#
-station = ncfile.createVariable('station','b',('station'))
-station.units = ''
-station.standard_name = 'station id'
-#station[:] = st_name
-
-elev = ncfile.createVariable('elevation','f4',('time','station'))
-elev.units = 'ft'
-elev.standard_name = 'Sensor elevation above NAVD 88'
-
-#CLOSE
-ncfile.close()
-print "-- File closed successfully"
+    z = np.array(full_data[full_data.keys()[num]]['data']['elevation'])
+    bp = np.array(full_data[full_data.keys()[num]]['data']['nearest_barometric_sensor_psi'])
+    lat = full_data[full_data.keys()[num]]['meta']['lat']
+    lon = full_data[full_data.keys()[num]]['meta']['lon']
+    val = np.max(z)    
+    idx = np.argmax(z)
+    
+    bpz.append(bp[idx])
+    zz.append(val)    
+    x.append(lon)
+    y.append(lat)
+    
+bpz = np.array(bpz)*10
+pts = ax.scatter(x, y, c=zz, s=bpz)
+ax.set_xlabel('Lon')
+ax.set_ylabel('Lat')
+ax.set_title("Plot Showing Locations of Maximum Water Level\nColor coded by Maximum water level(m)\n Sized by barometric pressure (psi)")
+fig.colorbar(pts)
+plt.show()
 
 # <codecell>
 
