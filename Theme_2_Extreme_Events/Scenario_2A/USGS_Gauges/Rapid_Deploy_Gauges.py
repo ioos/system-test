@@ -38,10 +38,8 @@ from netCDF4 import date2num
 from IPython.display import HTML, Javascript, display
 import folium
 import numpy as np
-from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 import matplotlib.dates as md
-
 from utilities import (css_styles,inline_map)
 css_styles()
 
@@ -291,9 +289,9 @@ ax = plt.gca()
 plt.ylim((0,20))
 ax.xaxis.set_major_formatter(md.DateFormatter('%B,%d\n%H:%M'))
 
-# <codecell>
+# <markdowncell>
 
-## Generate Plot of maximum water level and its location
+# ## Generate Plot of maximum water level and its location
 
 # <codecell>
 
@@ -327,9 +325,6 @@ pts = ax.scatter(x, y, c=zz, s=bpz)
 ax.set_xlabel('Lon')
 ax.set_ylabel('Lat')
 ax.set_title("Plot Showing Locations of Maximum Water Level\nColor coded by Maximum water level(m)\n Sized by barometric pressure (psi)")
-fig.colorbar(pts)
+cb = fig.colorbar(pts)
 plt.show()
-
-# <codecell>
-
 
