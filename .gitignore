@@ -4,5 +4,6 @@
 *.ipynb_checkpoints
 *-checkpoint.ipynb
 *.db
-*.txt
+# need .txt files for requirements.txt
+# *.txt
 *.DS_Store
