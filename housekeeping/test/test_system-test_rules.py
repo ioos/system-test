@@ -21,9 +21,10 @@ class RunNotebooks(unittest.TestCase):
         files = []
         path = os.path.abspath(os.path.join(os.getcwd(), os.pardir, os.pardir))
         for root, dirs, fnames in os.walk(path):
-            for fname in fnames:
-                if fname.endswith(".ipynb"):
-                    files.append(os.path.join(root, fname))
+            if 'backup' not in root:
+                for fname in fnames:
+                    if fname.endswith(".ipynb"):
+                        files.append(os.path.join(root, fname))
         self.files = files
 
     def tearDown(self):
@@ -34,15 +35,18 @@ class RunNotebooks(unittest.TestCase):
         for fname in self.files:
             folder, ipy_file = os.path.split(fname)
             py_file = fname[:-5] + 'py'
-            print('Looking for:\n{}\n'.format(py_file))
-            self.assertTrue(os.path.isfile(py_file))
+            req = os.path.isfile(py_file)
+            if not req:
+                print('Cannot find:\n{}\n'.format(req))
+            self.assertTrue(req)
 
     def test_conda_requeriment_exists(self):
         """Check if there is a conda-requirements.txt for the notebook."""
         for fname in self.files:
             folder, ipy_file = os.path.split(fname)
             req = os.path.join(folder, 'conda-requirements.txt')
-            print('Looking for:\n{}\n'.format(req))
+            if not os.path.isfile(req):
+                print('Cannot find:\n{}\n'.format(req))
             self.assertTrue(os.path.isfile(req))
 
     def test_pip_requeriment_exists(self):
@@ -50,7 +54,8 @@ class RunNotebooks(unittest.TestCase):
         for fname in self.files:
             folder, ipy_file = os.path.split(fname)
             req = os.path.join(folder, 'pip-requirements.txt')
-            print('Looking for:\n{}\n'.format(req))
+            if not os.path.isfile(req):
+                print('Cannot find:\n{}\n'.format(req))
             self.assertTrue(os.path.isfile(req))
 
 
