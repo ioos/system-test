@@ -1,7 +1,5 @@
-# -*- coding: utf-8 -*-
-# <nbformat>3.0</nbformat>
 
-# <markdowncell>
+# coding: utf-8
 
 # ># IOOS System Test: Rapid Deployment gages from USGS
 # 
@@ -19,11 +17,9 @@
 # * Plot time series of maximum waterlevel
 # * Plot locations of maximum waterlevel
 
-# <markdowncell>
-
 # ### import required libraries
 
-# <codecell>
+# In[1]:
 
 import re
 import os
@@ -45,17 +41,17 @@ from IPython.display import HTML, Javascript, display
 from utilities import css_styles, inline_map
 css_styles()
 
-# <markdowncell>
 
 # <div class="success"><strong>Extract Data </strong> - Does the data dir exist, if not extract it </div>
 
-# <codecell>
+# In[2]:
 
 def unzip(source_filename, dest_dir):
     with zipfile.ZipFile(source_filename) as zf:
         zf.extractall(dest_dir)
 
-# <codecell>
+
+# In[3]:
 
 if os.path.isdir("data_files"):
     pass
@@ -63,16 +59,16 @@ else:
     print("Data Dir does not exist... Extracting.")
     unzip('sample_data_files.zip', os.getcwd())
 
-# <codecell>
+
+# In[4]:
 
 files = os.listdir('data_files') 
 print("Water Level Files: %s" % len(files))
 
-# <markdowncell>
 
 # <div class="info"><strong>Process Data </strong> - Read the data files and create a dict of the fields </div>
 
-# <codecell>
+# In[5]:
 
 def parse_metadata(fname):
     meta_data = {}
@@ -100,7 +96,8 @@ def parse_metadata(fname):
                             meta_data[fields[fd]] = -meta_data[fields[fd]]
     return meta_data
 
-# <codecell>
+
+# In[6]:
 
 divid = str(uuid.uuid4())
 
@@ -123,30 +120,27 @@ for count, fname in enumerate(files):
     display(Javascript("$('div#%s').width('%i%%')" %
                        (divid, int(percent_complete))))
 
-# <markdowncell>
 
 # #### Show the available fields from the processed data files
 
-# <codecell>
+# In[7]:
 
 print("Data Fields: {}, {}, {}".format(actual_data.index.name,
                                        *actual_data.columns))
 
-# <markdowncell>
 
 # # Remove 'Sensor elevation above NAVD 88 (ft)'
 
-# <codecell>
+# In[8]:
 
 for key, value in full_data.iteritems():
     offset = float(value['meta']['elevation'])
     value['data']['elevation'] -= offset
 
-# <markdowncell>
 
 # ## Plot all Water Level data in the NJ area
 
-# <codecell>
+# In[9]:
 
 fig, ax = plt.subplots(figsize=(16, 3))
 
@@ -162,11 +156,10 @@ for key, value in full_data.iteritems():
     except Exception as e:
         print(e)
 
-# <markdowncell>
 
 # ## Plot all Pressure data in the NJ area
 
-# <codecell>
+# In[10]:
 
 fig, ax = plt.subplots(figsize=(16, 3))
 
@@ -182,11 +175,10 @@ for key, value in full_data.iteritems():
     except Exception as e:
         print(e)
 
-# <markdowncell>
 
 # ## Map the Gage locations
 
-# <codecell>
+# In[11]:
 
 map = folium.Map(width=800, height=500, location=[30, -73], zoom_start=4)
 
@@ -216,11 +208,10 @@ for st in full_data:
 map.add_layers_to_map()
 inline_map(map)
 
-# <markdowncell>
 
 # ## Generate Plot Of Maximum Water Levels from each gage
 
-# <codecell>
+# In[12]:
 
 dt, dv = [], []
 
@@ -253,11 +244,10 @@ ax.set_xlim(md.date2num(datetime(2011, 8, 25, 20)),
             md.date2num(datetime(2011, 8, 30)))
 ax.xaxis.set_major_formatter(md.DateFormatter('%B,%d\n%H:%M'))
 
-# <markdowncell>
 
 # ## Generate Plot of maximum water level and its location
 
-# <codecell>
+# In[13]:
 
 mpl.rcParams['legend.fontsize'] = 10
 
