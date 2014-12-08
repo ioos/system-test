@@ -2,3 +2,15 @@ beautifulsoup4
 requests
 pandas
 folium
+pandas
+numpy
+matplotlib
+OWSLib
+netCDF4
+lxml
+pyoos
+cython
+pyshp
+Pillow
+cartopy
+pyke
