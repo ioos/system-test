@@ -3,7 +3,6 @@ requests
 pandas
 folium
 pandas
-numpy
 matplotlib
 OWSLib
 netCDF4
