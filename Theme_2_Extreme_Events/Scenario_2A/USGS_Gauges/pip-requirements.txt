@@ -17,3 +17,5 @@ pyke
 Shapely
 biggus
 prettyplotlib
+pandas
+matplotlib

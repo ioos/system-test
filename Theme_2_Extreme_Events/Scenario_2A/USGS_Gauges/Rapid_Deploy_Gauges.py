@@ -1,7 +1,5 @@
-# -*- coding: utf-8 -*-
-# <nbformat>3.0</nbformat>
 
-# <markdowncell>
+# coding: utf-8
 
 # ># IOOS System Test: Rapid Deployment gages from USGS
 # 
@@ -19,315 +17,268 @@
 # * Plot time series of maximum waterlevel
 # * Plot locations of maximum waterlevel
 
-# <markdowncell>
-
 # ### import required libraries
 
-# <codecell>
+# In[ ]:
 
-from bs4 import BeautifulSoup
-import requests
 import re
+import os
 import csv
-import os,zipfile
-import pandas as pd
-import json
-import sys
 import uuid
-from netCDF4 import date2num
-from IPython.display import HTML, Javascript, display
+import zipfile
+
+from datetime import datetime
+
 import folium
 import numpy as np
-import matplotlib.pyplot as plt
+import pandas as pd
+import matplotlib as mpl
 import matplotlib.dates as md
-from utilities import (css_styles,inline_map)
+import matplotlib.pyplot as plt
+
+from IPython.display import HTML, Javascript, display
+
+from utilities import css_styles, inline_map
 css_styles()
 
-# <markdowncell>
+get_ipython().magic(u'matplotlib inline')
+
 
 # <div class="success"><strong>Extract Data </strong> - Does the data dir exist, if not extract it </div>
 # 
+# 
 
-# <codecell>
+# In[ ]:
 
 def unzip(source_filename, dest_dir):
     with zipfile.ZipFile(source_filename) as zf:
         zf.extractall(dest_dir)
 
-# <codecell>
 
-if (os.path.isdir("./data_files/")):
+# In[ ]:
+
+if os.path.isdir("data_files"):
     pass
 else:
-    print "Data Dir does not exist...extracting"
-    unzip('sample_data_files.zip','./')
+    print("Data Dir does not exist... Extracting.")
+    unzip('sample_data_files.zip', os.getcwd())
 
-# <codecell>
 
-files = os.listdir('./data_files/') 
-print "Water Level Files:",len(files)
-non_decimal = re.compile(r'[^\d.]+')
+# In[ ]:
 
-# <markdowncell>
+files = os.listdir('data_files') 
+print("Water Level Files: %s" % len(files))
+
 
 # <div class="info"><strong>Process Data </strong> - Read the data files and create a dict of the fields </div>
 
-# <codecell>
+# In[ ]:
+
+def parse_metadata(fname):
+    meta_data = {}
+    non_decimal = re.compile(r'[^\d.]+')
+    fields = {'Sensor location latitude': 'lat',
+              'Sensor location longitude': 'lon',
+              'Site id =': 'name',
+              'Sensor elevation above NAVD 88 =': 'elevation',
+              'Barometric sensor site (source of bp) =': 'bp_source',
+              'Lowest recordable water elevation is': 'lowest_wl'}
+    with open(os.path.join('data_files', fname)) as f:
+        content = f.readlines()
+        for k, ln in enumerate(content):
+            content[k] = ln.strip()
+            if content[k].startswith('#'):
+                for fd in fields:
+                    if fd in content[k]:
+                        if fields[fd] == 'name':
+                            meta_data[fields[fd]] = content[k].split(fd)[-1]
+                        else:
+                            val = (content[k].split(fd)[-1])
+                            val = float(non_decimal.sub('', val))
+                            meta_data[fields[fd]] = val
+                        if fields[df] == 'lon':
+                            meta_data[fields[fd]] = -meta_data[fields[fd]]
+    return meta_data
+
+
+# In[ ]:
 
 divid = str(uuid.uuid4())
 
-pb = HTML(
-"""
+pb = HTML("""
 <div style="border: 1px solid black; width:500px">
   <div id="%s" style="background-color:blue; width:0%%">&nbsp;</div>
 </div> 
 """ % divid)
 
-count =0
-full_data = {}
 display(pb)
-for fi,file_name in enumerate(files):
-    #print count,file_name
-    count+=1
+full_data = {}
+for count, fname in enumerate(files):
+    meta_data = parse_metadata(fname)
+    kw = dict(parse_dates=True, sep='\t', skiprows=29, index_col=0)
+    actual_data = pd.read_csv(os.path.join('data_files', fname), **kw)
+    full_data[fname] = {'meta': meta_data,
+                        'data': actual_data}
+    
+    percent_complete = ((float(count+1) / float(len(files))) * 100.)
+    display(Javascript("$('div#%s').width('%i%%')" %
+                       (divid, int(percent_complete))))
 
-    actual_data = {'dates':[]}
-    with open('./data_files/'+file_name) as f:
-        content = f.readlines()
-        
-        titles_set = True
-        titles = ['dates']        
-        
-        meta_data = {}
-        
-        
-        fields = {
-                  'Sensor location latitude':'lat',
-                  'Sensor location longitude':'lon',
-                  'Site id =':'name',
-                  'Sensor elevation above NAVD 88 =':'elevation',
-                  'Barometric sensor site (source of bp) =':'bp_source',
-                  'Lowest recordable water elevation is':'lowest_wl'
-                  }
-        
-        for i,ln in enumerate(content):            
-            content[i] = ln.strip()
-            if content[i].startswith('#'):
-                for f in fields:
-                    #search inside the array element
-                    if f in content[i]:
-                        if fields[f] == 'name':
-                            meta_data[fields[f]] = content[i].split(f)[-1]
-                        else:                                
-                            val = (content[i].split(f)[-1])
-                            meta_data[fields[f]] = float(non_decimal.sub('', val))
-                            
-                            if fields[f] =='lon':
-                                meta_data[fields[f]] = -meta_data[fields[f]]
-
-            else: 
-                try:
-                    data_row = content[i].split('\t')
-
-                    if len(data_row[0])>1:
-                        #print the data looks to be ok-ish                    
-                        if titles_set:                                                
-                            titles_set = False
-                            for t in data_row:
-                                if not 'date_time' in t:
-                                    titles.append(t)                            
-                                    actual_data[t]=[]
-
-                        else:
-                            if '.' in data_row:
-                                data_row[0] = data_row[0].split('.')[0]
-                            
-                            try:
-                                dt = datetime.datetime.strptime(data_row[0], '%m-%d-%Y %H:%M:%S')
-                                actual_data['dates'].append(dt) 
-                            except:
-                                dt = datetime.datetime.strptime(data_row[0], '%m-%d-%Y %H:%M:%S.%f')
-                                actual_data['dates'].append(dt)                                 
-
-                            for i in range(1,len(data_row)):
-                                try:
-                                    val = data_row[i]                            
-                                    actual_data[titles[i]].append(float(val))
-                                except Exception, e:
-                                    actual_data[titles[i]].append(numpy.nan)  
-                except:
-                    print 'error:',data_row
-                    break
-
-        full_data[file_name] = {'meta': meta_data,'data': actual_data}
-        percent_complete = ((float(fi+1)/float(len(files)))*100.)
-        display(Javascript("$('div#%s').width('%i%%')" % (divid, int(percent_complete))))
-
-# <markdowncell>
 
 # #### Show the available fields from the processed data files
 
-# <codecell>
+# In[ ]:
 
-print "Data Fields:",titles
+print("Data Fields: {}, {}, {}".format(actual_data.index.name,
+                                       *actual_data.columns))
 
-# <codecell>
 
-#remove 'Sensor elevation above NAVD 88 (ft)'     
-for i in range(0, len(full_data.keys())):
-    data = full_data[full_data.keys()[i]]['data']     
-    meta_elev = full_data[full_data.keys()[i]]['meta']['elevation']                            
-    data['elevation'] = np.array(data['elevation']) - float(meta_elev)            
+# # Remove 'Sensor elevation above NAVD 88 (ft)'
 
-# <markdowncell>
+# In[ ]:
+
+for key, value in full_data.iteritems():
+    offset = float(value['meta']['elevation'])
+    value['data']['elevation'] -= offset
+
 
 # ## Plot all Water Level data in the NJ area
 
-# <codecell>
+# In[ ]:
 
-fig = plt.figure(figsize=(16, 3))
+fig, ax = plt.subplots(figsize=(16, 3))
+
 fig.suptitle('Water Elevation', fontsize=14)
-for i in range(0, len(full_data.keys())):
-    num = i
-    try:
-        if 'SSS-NJ' in full_data.keys()[num]:            
-            data = full_data[full_data.keys()[num]]['data']                     
-            df = pd.DataFrame(data=data,index=data['dates'],columns = titles )    
-            plt.plot(df.index, df[titles[1]])
-            plt.xlabel('Date', fontsize=14)
-            plt.ylabel(titles[1]+' (ft)', fontsize=14) 
-    except Exception, e:
-        print e
-        pass
 
-# <markdowncell>
+for key, value in full_data.iteritems():
+    try:
+        if 'SSS-NJ' in key:
+            df = value['data']                     
+            ax.plot(df.index, df['elevation'])
+            ax.set_xlabel('Date', fontsize=14)
+            ax.set_ylabel('Elevation (ft)', fontsize=14) 
+    except Exception as e:
+        print(e)
+
 
 # ## Plot all Pressure data in the NJ area
 
-# <codecell>
+# In[ ]:
 
-fig = plt.figure(figsize=(16, 3))
-fig.suptitle(titles[2], fontsize=14)
-for i in range(0, len(full_data.keys())):
-    num = i
+fig, ax = plt.subplots(figsize=(16, 3))
+
+fig.suptitle('nearest_barometric_sensor_psi', fontsize=14)
+
+for key, value in full_data.iteritems():
     try:
-        if 'SSS-NJ' in full_data.keys()[num]:
-            #print full_data[full_data.keys()[num]]['meta']
-            data = full_data[full_data.keys()[num]]['data']                        
-            df = pd.DataFrame(data=data,index=full_data[full_data.keys()[num]]['data']['dates'],columns = titles )    
-            plt.plot(df.index, df[titles[2]])
+        if 'SSS-NJ' in key:
+            df = value['data']                     
+            ax.plot(df.index, df['nearest_barometric_sensor_psi'])
+            ax.set_xlabel('Date', fontsize=14)
+            ax.set_ylabel('Nearest barometric sensor (psi)', fontsize=14) 
+    except Exception as e:
+        print(e)
 
-            plt.xlabel('Date', fontsize=14)
-            plt.ylabel(titles[2], fontsize=14) 
-    except Exception, e:
-        print e
-        pass
-
-# <markdowncell>
 
 # ## Map the Gage locations
 
-# <codecell>
+# In[ ]:
 
-map = folium.Map(width=800,height=500,location=[30, -73], zoom_start=4)
+map = folium.Map(width=800, height=500, location=[30, -73], zoom_start=4)
 
-#generate the color map for the storms
-color_list = {"Tropical Storm":'#4AD200',
-              "Category 1 Hurricane":'#CFD900',
-              "Category 2 Hurricane":'#E16400',
-              "Category 3 Hurricane":'#ff0000'}
+# Generate the color map for the storms.
+color_list = {"Tropical Storm": '#4AD200',
+              "Category 1 Hurricane": '#CFD900',
+              "Category 2 Hurricane": '#E16400',
+              "Category 3 Hurricane": '#ff0000'}
 
 
-#add the track line
+# Add the track line.
 with open('track.csv', 'rb') as csvfile:
     spamreader = csv.reader(csvfile, delimiter=',', quotechar='|')
     for row in spamreader:
-        lat = row[2]
-        lon = row[3]
-        popup = row[0]+" : "+row[1] + "<br>"+ row[6]        
-        map.circle_marker([lat, lon], popup=popup, fill_color=color_list[row[6]], radius=10000, line_color='#000000')
+        lon, lat = row[3], row[2]
+        popup = "{} : {} <br> {}".format(row[0], row[1], row[6])
+        map.circle_marker([lat, lon], popup=popup,
+                          fill_color=color_list[row[6]],
+                          radius=10000, line_color='#000000')
 
-#add the station
+# Add the station.
 for st in full_data:
-    lat =  full_data[st]['meta']['lat']
+    lat = full_data[st]['meta']['lat']
     lon = full_data[st]['meta']['lon']
-    map.simple_marker([lat, lon], popup=st,clustered_marker=True)    
+    map.simple_marker([lat, lon], popup=st, clustered_marker=True)    
+
 map.add_layers_to_map()
+inline_map(map)
 
-inline_map(map)  
-
-# <markdowncell>
 
 # ## Generate Plot Of Maximum Water Levels from each gage
 
-# <codecell>
+# In[ ]:
 
-dt = []
-dv = []
+dt, dv = [], []
 
-fig = plt.figure(figsize=(16, 3))
+fig, ax = plt.subplots(figsize=(16, 3))
 fig.suptitle('Max Water Level (ft), 2011', fontsize=14)
-for i in range(0, len(full_data.keys())):
-    num = i
-    z = np.array(full_data[full_data.keys()[num]]['data']['elevation'])
-    val = np.max(z)
+
+for key, value in full_data.iteritems():
+    df = value['data']                     
+    z = df['elevation'].values
+    
     idx = np.argmax(z)
-    t = np.array(full_data[full_data.keys()[num]]['data']['dates'])[idx]
+    val = z[idx]
+    t = df.index[idx]
     
     dt.append(t)
     dv.append(val)
     
-    data_dict = {'elevation':dv,'dates':dt}
+    data_dict = {'elevation': dv,
+                 'dates': dt}
     
-    df = pd.DataFrame(data=data_dict,index=dt,columns=['elevation','dates'])   
+    df = pd.DataFrame(data=data_dict, index=dt, columns=['elevation', 'dates'])   
     
-    plt.scatter(df.index,df['elevation'])
-    plt.xlabel('Date', fontsize=14)
-    plt.ylabel('Water Level'+' (ft)', fontsize=14) 
+    ax.scatter(df.index, df['elevation'])
+    ax.set_xlabel('Date', fontsize=14)
+    ax.set_ylabel('Water Level (ft)', fontsize=14) 
 
 
-ax = plt.gca()
-plt.ylim((0,20))
+ax.set_ylim(0, 20)
+ax.set_xlim(md.date2num(datetime(2011, 8, 25, 20)),
+            md.date2num(datetime(2011, 8, 30)))
 ax.xaxis.set_major_formatter(md.DateFormatter('%B,%d\n%H:%M'))
 
-# <markdowncell>
 
 # ## Generate Plot of maximum water level and its location
 
-# <codecell>
+# In[ ]:
 
 mpl.rcParams['legend.fontsize'] = 10
 
-x = []
-y = []
-zz = []
-bpz = []
+x, y, zz, bpz = [], [], [], []
 
-fig = plt.figure(figsize=(10, 10))
-ax = fig.add_subplot(111)
+fig, ax = plt.subplots(figsize=(10, 10))
 
-for i in range(0, len(full_data.keys())):
-    num = i
-
-    z = np.array(full_data[full_data.keys()[num]]['data']['elevation'])
-    bp = np.array(full_data[full_data.keys()[num]]['data']['nearest_barometric_sensor_psi'])
-    lat = full_data[full_data.keys()[num]]['meta']['lat']
-    lon = full_data[full_data.keys()[num]]['meta']['lon']
-    val = np.max(z)    
-    idx = np.argmax(z)
+for key, value in full_data.iteritems():
+    df = value['data']
+    z = df['elevation'].values
+    bp = df['nearest_barometric_sensor_psi'].values
+    lon = value['meta']['lon']
+    lat = value['meta']['lat']
     
+    idx = np.argmax(z)
     bpz.append(bp[idx])
-    zz.append(val)    
+    zz.append(z[idx])
     x.append(lon)
     y.append(lat)
-    
-bpz = np.array(bpz)*10
+
+bpz = np.array(bpz) * 10.
 pts = ax.scatter(x, y, c=zz, s=bpz)
 ax.set_xlabel('Lon')
 ax.set_ylabel('Lat')
-ax.set_title("Plot Showing Locations of Maximum Water Level\nColor coded by Maximum water level (ft)\n Sized by barometric pressure (psi)")
+title = ("Plot Showing Locations of Maximum Water Level\n"
+         "Color coded by Maximum water level (ft)\n"
+         "Sized by barometric pressure (psi)")
+ax.set_title(title)
 cb = fig.colorbar(pts)
-plt.show()
-
-# <codecell>
-
 
