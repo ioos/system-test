@@ -10,17 +10,10 @@ css_styles()
 
 # # IOOS System Test - Theme 1 - Scenario A - [Description](https://github.com/ioos/system-test/wiki/Development-of-Test-Themes#theme-1-baseline-assessment)
 # 
-# A researcher new to IOOS wishes to find out what information is available for further research. 
-# Queries are created to determine  how much time series information is available on common, core 
-# oceanographic variables such as  wind speed and direction, wave height and duration,  water 
-# temperature and salinity at different depths, current speed and direction, 
-# where this information resides, and whether this information can be used as input to a few of the 
-# most common data models.
+# A common task is to search for what information is available for further research. Programmatically, this is done using a list of text fields (strings) to query common data catalogs and find out what services are available. This notebook tries to determine the most basic metrics about those services (e.g., how many services are available in each catalog).
 # 
-# ## Model Strings
-# 
-# ## Questions
-# 1. What Model records and how many are available via each endpoint?
+# ##Guiding Question
+# What model records and how many are available via each endpoint in our list of CSWs?
 
 # <markdowncell>
 
@@ -45,6 +38,10 @@ known_csw_servers = endpoints = ['http://data.nodc.noaa.gov/geoportal/csw',
 # <markdowncell>
 
 # <div class="error"><strong>CSW Server Broken</strong> - 'https://data.noaa.gov/csw' has been omitted because it is not working.  See: https://github.com/ioos/system-test/issues/130</div>
+
+# <markdowncell>
+
+# This notebook is primarily concerned with models, so we generate a list of terms over which to search the catalogs.
 
 # <codecell>
 
@@ -117,6 +114,11 @@ df = df.drop_duplicates()
 
 # <markdowncell>
 
+# ##Results
+# Now that we have the number of results, what do they mean?
+
+# <markdowncell>
+
 # #### Total number of services
 
 # <codecell>
@@ -132,6 +134,7 @@ total_services.sort('Number of services', ascending=False).plot(kind="barh", fig
 # <markdowncell>
 
 # #### Attempt to normalize the services manually
+# These lines attempt to get around the issue of the same services being identified differently by relying on the "Scheme" metadata field.
 
 # <codecell>
 
@@ -146,6 +149,8 @@ normalized_urns_summary.sort('Number of services', ascending=False).plot(kind="b
 
 # <markdowncell>
 
+# ##Results
+# This section plots the number of services available for the list of model strings we asked for. These are plotted altogether, and then split in various ways.
 # #### The number of service types for each model type
 
 # <codecell>
@@ -155,7 +160,7 @@ import math
 model_service_summary = pd.DataFrame(normalized_urns.groupby(["model", "scheme"], sort=True).size(), columns=("Number of services",))
 #HTML(model_service_summary.to_html())
 model_service_plotter = model_service_summary.unstack("model")
-model_service_plot = model_service_plotter.plot(kind='barh', subplots=True, figsize=(12,35,), sharey=True)
+model_service_plot = model_service_plotter.plot(kind='barh', figsize=(10,8,), sharey=True)
 
 # <markdowncell>
 
@@ -166,7 +171,7 @@ model_service_plot = model_service_plotter.plot(kind='barh', subplots=True, figs
 records_per_csw = pd.DataFrame(normalized_urns.groupby(["model", "server"]).size(), columns=("Number of services",))
 #HTML(records_per_csw.to_html())
 model_csw_plotter = records_per_csw.unstack("model")
-model_csw_plot = model_csw_plotter.plot(kind='barh', subplots=True, figsize=(12,20,), sharey=True)
+model_csw_plot = model_csw_plotter.plot(kind='barh', figsize=(10,8,), sharey=True)
 
 # <markdowncell>
 
