@@ -12,7 +12,7 @@ css_styles()
 # 
 # ## Core Variable Strings
 # 
-# This notebook looks at the IOOS core variables and uses the Marine Metadata Interoperability SPARQL endpoint to convert them to CF Standard names.  Each IOOS CSW server is then queryied for CF standard name that is associated with an IOOS Core Variable.
+# This notebook looks at the IOOS core variables and uses the Marine Metadata Interoperability SPARQL endpoint to convert them to CF Standard Names. Each IOOS CSW server is then queryied for the CF standard name that is associated with an IOOS Core Variable.
 # 
 # ## Questions
 # 1. Using a list of Core IOOS Variables and the MMI SPARQL service, can we search and quantify records from CSW endpoints that relate to core variables?
@@ -198,7 +198,7 @@ var_service_plot = var_service_plotter.plot(kind='barh', subplots=True, figsize=
 
 # <markdowncell>
 
-# #### Variabes per CSW server
+# #### Variables per CSW server
 
 # <codecell>
 
