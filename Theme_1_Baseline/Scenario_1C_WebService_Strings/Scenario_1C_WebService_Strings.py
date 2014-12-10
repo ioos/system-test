@@ -1,7 +1,17 @@
+# -*- coding: utf-8 -*-
+# <nbformat>3.0</nbformat>
 
-# coding: utf-8
+# <markdowncell>
 
-# In[1]:
+# # IOOS System Test - Theme 1 - Scenario C - [Description](https://github.com/ioos/system-test/wiki/Development-of-Test-Themes#theme-1-baseline-assessment)
+# 
+# ## WebService Strings
+# This notebook looks at the a series of typical WebServices. It searches for a list of WebService names (strings) in a list of CSW catalogs and simply lists how many services are avialable from each CSW.
+# 
+# ## Guiding Questions
+# Based on a series of WebService Strings, can we access web services via a series of CSW endpoints and quantify those results? Based on those results, is it apparent that some web services are not being discovered as they are utilizing variations on WebService Strings?
+
+# <codecell>
 
 import pandas as pd
 from pandas import Series, DataFrame
@@ -39,10 +49,12 @@ from owslib.namespaces import Namespaces
 #from ioos_catalog import app,db
 
 
+# <markdowncell>
 
-# In[2]:
+# ####Search for web services
+# This is a collection of lists that we will need to examine Catalogs 
 
-#This is a collection of lists that we will need to examine Catalogs 
+# <codecell>
 
 web_service_strings = ['urn:x-esri:specification:ServiceType:OPeNDAP',
                        'urn:x-esri:specification:ServiceType:odp:url',
@@ -60,12 +72,11 @@ services =      {'SOS'              : 'urn:x-esri:specification:ServiceType:sos:
 # This looks like a good notebook to work from
 # https://www.wakari.io/sharing/bundle/rsignell/Model_search
 
+# <markdowncell>
 
-# In[3]:
+# The next cell lists catalog endpoints.  As CSW's are discovered within the larger IOOS Umbrealla, this list is updated by the IOOS Program Office here: https://github.com/ioos/system-test/wiki/Service-Registries-and-Data-Catalogs
 
-#This cell lists catalog endpoints.  As CSW's are discovered within the larger
-#    IOOS Umbrealla, this list is updated by the IOOS Program Office here:
-#    https://github.com/ioos/system-test/wiki/Service-Registries-and-Data-Catalogs
+# <codecell>
 
 #endpoint = 'http://data.nodc.noaa.gov/geoportal/csw'  # NODC Geoportal: collection level
 #endpoint = 'http://geodiscover.cgdi.ca/wes/serviceManagerCSW/csw'  # NRCAN 
@@ -96,8 +107,11 @@ endpoints = ['http://www.nodc.noaa.gov/geoportal/csw',
              'http://geodiscover.cgdi.ca/wes/serviceManagerCSW/csw', 
              'http://geoport.whoi.edu/gi-cat/services/cswiso']
 
+# <markdowncell>
 
-# In[4]:
+# Test each CSW and look for the specific endpoints. Print the results.
+
+# <codecell>
 
 def service_urls(records,service_string='urn:x-esri:specification:ServiceType:wms:url'):
     urls=[]
@@ -145,5 +159,8 @@ for endpoint in endpoints:
 #print dict2        
 print pd.DataFrame(dict2)
 #print pd.DataFrame(dict2.keys()) 
+
+
+# <codecell>
 
 
