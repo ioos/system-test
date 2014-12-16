@@ -217,8 +217,12 @@ print("Lat/Lon Box: %s" % box_str)
 
 # <codecell>
 
-# Grab the sos url and use it for the service.
-url = (sos_urls[0].split("?")[0] + '?'
+# Grab the opendap sos url and use it for the service.
+for sos_url in sos_urls:
+    if 'opendap' in sos_url:
+        break
+        
+url = (sos_url.split("?")[0] + '?'
        'service=SOS&request=GetObservation&version=1.0.0&'
        'observedProperty=%s&'
        'offering=urn:ioos:network:NOAA.NOS.CO-OPS:WaterLevelActive&'
@@ -456,7 +460,7 @@ for url in dap_urls:
                     lon, lat = np.meshgrid(lon, lat)
                 j, i, dd = find_ij(lon, lat, d, obs_lon, obs_lat)
                 for n in range(nsta):
-                    # Only use if model cell is within 0.01 degree of requested
+                    # Only use if model cell is within 0.04 degree of requested
                     # location.
                     if dd[n] <= max_dist:
                         arr = a[istart:istop, j[n], i[n]].data
@@ -473,7 +477,7 @@ for url in dap_urls:
                 index, dd = nearxy(lon.flatten(), lat.flatten(),
                                    obs_lon, obs_lat)
                 for n in range(nsta):
-                    # Only use if model cell is within 0.1 degree of requested
+                    # Only use if model cell is within 0.04 degree of requested
                     # location.
                     if dd[n] <= max_dist:
                         arr = a[istart:istop, index[n]].data
@@ -497,11 +501,13 @@ for url in dap_urls:
 # <codecell>
 
 for df in model_df:
-    if not df.empty:
+    if 'Nantucket Island, MA' in df.name:
         ax = df.plot(figsize=(14, 6), title=df.name, legend=False)
         plt.setp(ax.lines[0], linewidth=4.0, color='0.7', zorder=1)
         ax.legend()
         ax.set_ylabel('m')
+        break
+model_max = list(set(df.max().values))
 
 # <markdowncell>
 
@@ -597,6 +603,10 @@ axes.set_xticklabels([0, 1, 10, 100, 1000])
 axes.set_xlim([0, 260])
 axes.set_ylim([0, 1.8])
 axes.grid(True)
+
+# Now plot the max height from the event onto this plot
+event = np.ones(len(T))*model_max
+axes.plot(T, event, 'g--')
 
 # <markdowncell>
 
