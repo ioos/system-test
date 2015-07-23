@@ -1,6 +1,0 @@
-folium
-matplotlib
-owslib
-pandas
-pyoos
-scipy

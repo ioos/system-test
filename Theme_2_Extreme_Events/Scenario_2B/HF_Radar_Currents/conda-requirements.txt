@@ -1,9 +1,0 @@
-folium
-iris
-lxml
-matplotlib
-OWSLib
-pandas
-pyoos
-requests
-shapely

@@ -1,4 +1,0 @@
-pandas
-OWSLib
-matplotlib
-iris
