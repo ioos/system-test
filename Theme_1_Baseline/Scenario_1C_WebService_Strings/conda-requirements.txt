@@ -1,7 +1,0 @@
-# This file may be used to create an environment using:
-# $ conda create --name <env> --file <this file>
-owslib
-matplotlib
-netcdf4
-pandas
-requests

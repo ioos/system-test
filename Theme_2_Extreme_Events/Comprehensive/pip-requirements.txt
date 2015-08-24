@@ -1,5 +1,0 @@
-cython
-numpy
-pandas
-matplotlib
-OWSLib
