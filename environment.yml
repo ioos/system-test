@@ -1,0 +1,12 @@
+name: SIT
+channels:
+  - ioos
+dependencies:
+  - mpld3
+  - pyoos
+  - pelican
+  - seaborn
+  - markdown
+  - utilities
+  - scikit-learn
+  - ipython-notebook==2.4.1
