@@ -1,9 +1,2 @@
-*.html
-*.pyc
-*.sublime-*
-*.ipynb_checkpoints
-*-checkpoint.ipynb
-*.db
-# need .txt files for requirements.txt
-# *.txt
-*.DS_Store
+output/
+_nb_header.html
