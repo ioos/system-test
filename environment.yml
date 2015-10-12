@@ -1,4 +1,4 @@
-name: SIT
+name: ioos-blog
 channels:
   - ioos
 dependencies:
