@@ -1,5 +1,5 @@
 Title: Fetching data from a CSW catalog
-date:  2015-10-12 22:10
+date:  2015-10-12 23:05
 comments: true
 slug: fetching_data
 
