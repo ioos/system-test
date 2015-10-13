@@ -1,12 +1,73 @@
-name: ioos-blog
+# There is some redundancy in the list below,
+# for example, iris installs cartopy and therefore we don't need to list cartopy.
+# However, for the sake of readability,
+# I explicitly left some packages in the list so people can easily see what is being installed.
+
+# To install type:
+# $ conda env create environment.yml
+# and to remove:
+# $ conda env remove -n IOOS
+
+# Note that the python version is not specified,
+# but since not all the packages below are py3k compatible you will get a py27 env.
+
+name: ioos_blog
 channels:
-  - ioos
+    - ioos
 dependencies:
-  - mpld3
-  - pyoos
-  - pelican
-  - seaborn
-  - markdown
-  - utilities
-  - scikit-learn
-  - ipython-notebook==2.4.1
+    - basemap
+    - beautifulsoup4
+    - cartopy
+    - ctd
+    - cython
+    - descartes
+    - fiona
+    - folium
+    - gdal
+    - geojson
+    - geojsonio
+    - geopandas
+    - gsw
+    - ipython-notebook==2.4.1
+    - iris
+    - jinja2
+    - lxml
+    - markdown
+    - matplotlib
+    - mpld3
+    - mplleaflet
+    - netcdf4
+    - numpy
+    - oceans
+    - oct2py
+    - owslib
+    - paegan
+    - paegan-transport
+    - pandas
+    - pelican
+    - pillow
+    - pip
+    - proj4
+    - pykml
+    - pyoos
+    - pyproj
+    - pysgrid
+    - pyshp
+    - pytz
+    - pyugrid
+    - pywafo
+    - qrcode
+    - rasterio
+    - rdflib
+    - requests
+    - rtree
+    - runipy
+    - scikit-learn
+    - scipy
+    - seaborn
+    - shapely
+    - statsmodels
+    - sympy
+    - utilities
+    - xlrd
+    - yaml
