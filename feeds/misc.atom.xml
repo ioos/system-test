@@ -14,7 +14,7 @@
 &lt;p&gt;The second theme, extreme events, serves to test discovery, access,
 and usefulness of meteorological and oceanographic (metocean) data commonly needed to plan for or respond to extreme events such as coastal storms,
 oil spills, or search and rescue.
-The tests in this theme were focused around four questions:&lt;/p&gt;
+The tests in this theme are focused around four questions:&lt;/p&gt;
 &lt;ol&gt;
 &lt;li&gt;Is it possible to discover long enough records of metocean data to successfully perform extreme values analysis and predict extreme conditions for a given location?&lt;/li&gt;
 &lt;li&gt;Is it possible to discover and compare modeled and observed metocean parameters for a given geographic location?&lt;/li&gt;
@@ -111,7 +111,7 @@ and query data from the &lt;strong&gt;past week up to now&lt;/strong&gt;.&lt;/p&
 &lt;/div&gt;
 &lt;div class="inner_cell"&gt;
 &lt;div class="text_cell_render border-box-sizing rendered_html"&gt;
-&lt;p&gt;The next 3 cells is very similar to what we did in the &lt;a href="https://ioos.github.io/system-test/blog/2015/10/12/fetching_data/"&gt;fetching data example&lt;/a&gt;:&lt;/p&gt;
+&lt;p&gt;The next 3 cells are very similar to what we did in the &lt;a href="https://ioos.github.io/system-test/blog/2015/10/12/fetching_data/"&gt;fetching data example&lt;/a&gt;:&lt;/p&gt;
 &lt;ol&gt;
 &lt;li&gt;Instantiate a csw object using the NGDC catalog.&lt;/li&gt;
 &lt;li&gt;Create the &lt;code&gt;owslib.fes&lt;/code&gt; filter.&lt;/li&gt;
@@ -188,7 +188,7 @@ and query data from the &lt;strong&gt;past week up to now&lt;/strong&gt;.&lt;/p&
 &lt;/div&gt;
 &lt;div class="inner_cell"&gt;
 &lt;div class="text_cell_render border-box-sizing rendered_html"&gt;
-&lt;p&gt;The OPeNDAP URLs found were,&lt;/p&gt;
+&lt;p&gt;The OPeNDAP URLs found were;&lt;/p&gt;
 &lt;/div&gt;
 &lt;/div&gt;
 &lt;/div&gt;
@@ -247,7 +247,7 @@ http://thredds.axiomdatascience.com/thredds/dodsC/CA_DAS.nc
 Note that the last four look like model data, while all others are HF-Radar endpoints.&lt;/p&gt;
 &lt;p&gt;Can we find more near real-time data?&lt;/p&gt;
 &lt;p&gt;Let&amp;#39;s try the Center for Operational Oceanographic Products and Services (CO-OPS) and the National Data Buoy Center (NDBC).&lt;/p&gt;
-&lt;p&gt;Both services can be queried with using the &lt;code&gt;pyoos&lt;/code&gt; library.&lt;/p&gt;
+&lt;p&gt;Both services can be queried using the &lt;code&gt;pyoos&lt;/code&gt; library.&lt;/p&gt;
 &lt;/div&gt;
 &lt;/div&gt;
 &lt;/div&gt;
@@ -616,8 +616,8 @@ lat, lon, dist = 142 127
 &lt;div class="text_cell_render border-box-sizing rendered_html"&gt;
 &lt;p&gt;The models endpoints found in the CSW search are all global.
 Global model runs are not very useful when looking at such a small scale like the San Francisco Bay.&lt;/p&gt;
-&lt;p&gt;Since we do know that the SFO ports operational model exits.
-We can hard-code a data search for SFO and data points near the observations.&lt;/p&gt;
+&lt;p&gt;Since we do know that the SFO ports operational model exits,
+we can hard-code a data search for SFO and data points near the observations.&lt;/p&gt;
 &lt;/div&gt;
 &lt;/div&gt;
 &lt;/div&gt;
