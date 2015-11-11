@@ -1767,11 +1767,11 @@ jQuery(document).ready(function($) {
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p>A common task is to search for what information is available for further research later on.</p>
-<p>Programmatically we can build a list of strings to query common data catalogs and find out what services are available.
-This post will show how to perform a query for for numerical models strings and try to answer the question: how many services are available in each catalog?</p>
+<p>A common task is to find out what information is available for further research later on.</p>
+<p>We can programmatically build a list of strings to query common data catalogs and find out what services are available.
+This post will show how to perform a query for numerical models strings and try to answer the question: how many services are available in each catalog?</p>
 <p>To answers that question we will start by building a list of known catalogs <a href="https://github.com/ioos/system-test/wiki/Service-Registries-and-Data-Catalogs">services</a>.</p>
-<p>(<a href="https://github.com/ioos/system-test/wiki/Development-of-Test-Themes#scenario1A">This post is part of Theme 1 - Scenario A</a>)</p>
+<p>(<a href="https://github.com/ioos/system-test/wiki/Development-of-Test-Themes#scenario1A">This post is part of Theme 1 - Scenario A.</a>)</p>
 </div>
 </div>
 </div>
@@ -1812,25 +1812,14 @@ This post will show how to perform a query for for numerical models strings and 
 <div class="prompt input_prompt">In&nbsp;[4]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class="highlight-ipynb"><pre class="ipynb"><span class="n">known_model_strings</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;roms&#39;</span><span class="p">,</span> <span class="s">&#39;selfe&#39;</span><span class="p">,</span> <span class="s">&#39;adcirc&#39;</span><span class="p">,</span> <span class="s">&#39;ncom&#39;</span><span class="p">,</span> <span class="s">&#39;hycom&#39;</span><span class="p">,</span> <span class="s">&#39;fvcom&#39;</span><span class="p">,</span>
-                       <span class="s">&#39;pom&#39;</span><span class="p">,</span> <span class="s">&#39;wrams&#39;</span><span class="p">,</span> <span class="s">&#39;wrf&#39;</span><span class="p">]</span>
+<div class="highlight-ipynb"><pre class="ipynb"><span class="n">known_model_strings</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;roms&#39;</span><span class="p">,</span> <span class="s">&#39;selfe&#39;</span><span class="p">,</span> <span class="s">&#39;adcirc&#39;</span><span class="p">,</span> <span class="s">&#39;ncom&#39;</span><span class="p">,</span>
+                       <span class="s">&#39;hycom&#39;</span><span class="p">,</span> <span class="s">&#39;fvcom&#39;</span><span class="p">,</span> <span class="s">&#39;pom&#39;</span><span class="p">,</span> <span class="s">&#39;wrams&#39;</span><span class="p">,</span> <span class="s">&#39;wrf&#39;</span><span class="p">]</span>
 </pre></div>
 
 </div>
 </div>
 </div>
 
-</div>
-<div class="cell border-box-sizing text_cell rendered">
-<div class="prompt input_prompt">
-</div>
-<div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<h3 id="searching-for-models-via-csw-keyword-">Searching for models via CSW &#39;keyword&#39;</h3>
-<h4 id="constructhe-fes-filter-we-build-below-is-simpler-than-what-we-did-before-">ConstrucThe FES filter we build below is simpler than what we did before.</h4>
-<p>We are only looking for matches in <code>Title</code> or <code>Subject</code>that contain the model strings.t CSW Filters</p>
-</div>
-</div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
@@ -3442,10 +3431,10 @@ IlLiNPiJiIiIiIiUuL8BbeQqIVjeQIgAAAAASUVORK5CYII=
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p>We can note that some service types URNs for the same service type are being identified differently!</p>
+<p>We can note that some identical services types URNs are being identified differently!</p>
 <p>There should be a consistent way of representing each service,
 or a <a href="https://github.com/ioos/system-test/issues/57">mapping</a> needs to be made available.</p>
-<p>We can try to get around the issue of the same services being identified differently by relying on the &quot;Scheme&quot; metadata field.</p>
+<p>We can try to get around the issue of the same services being identified differently by relying on the <code>&quot;Scheme&quot;</code> metadata field.</p>
 </div>
 </div>
 </div>
@@ -10844,8 +10833,8 @@ iIiIiIhICVPjLiIiIiIiIlLC1LiLiIiIiIiIlLA/CRKxytd0nIAAAAAASUVORK5CYII=
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p>Query several catalogs like we did in this notebook is very slow.
-This approach should be used only to help to determine which catalog we can use after we know what what type of data and service we need.</p>
+<p>Querying several catalogs like we did in this notebook is very slow.
+This approach should be used only to help to determine which catalog we can use after we know what type of data and service we need.</p>
 </div>
 </div>
 </div>

@@ -5,11 +5,11 @@
 &lt;/div&gt;
 &lt;div class="inner_cell"&gt;
 &lt;div class="text_cell_render border-box-sizing rendered_html"&gt;
-&lt;p&gt;A common task is to search for what information is available for further research later on.&lt;/p&gt;
-&lt;p&gt;Programmatically we can build a list of strings to query common data catalogs and find out what services are available.
-This post will show how to perform a query for for numerical models strings and try to answer the question: how many services are available in each catalog?&lt;/p&gt;
+&lt;p&gt;A common task is to find out what information is available for further research later on.&lt;/p&gt;
+&lt;p&gt;We can programmatically build a list of strings to query common data catalogs and find out what services are available.
+This post will show how to perform a query for numerical models strings and try to answer the question: how many services are available in each catalog?&lt;/p&gt;
 &lt;p&gt;To answers that question we will start by building a list of known catalogs &lt;a href="https://github.com/ioos/system-test/wiki/Service-Registries-and-Data-Catalogs"&gt;services&lt;/a&gt;.&lt;/p&gt;
-&lt;p&gt;(&lt;a href="https://github.com/ioos/system-test/wiki/Development-of-Test-Themes#scenario1A"&gt;This post is part of Theme 1 - Scenario A&lt;/a&gt;)&lt;/p&gt;
+&lt;p&gt;(&lt;a href="https://github.com/ioos/system-test/wiki/Development-of-Test-Themes#scenario1A"&gt;This post is part of Theme 1 - Scenario A.&lt;/a&gt;)&lt;/p&gt;
 &lt;/div&gt;
 &lt;/div&gt;
 &lt;/div&gt;
@@ -50,25 +50,14 @@ This post will show how to perform a query for for numerical models strings and 
 &lt;div class="prompt input_prompt"&gt;In&amp;nbsp;[4]:&lt;/div&gt;
 &lt;div class="inner_cell"&gt;
     &lt;div class="input_area"&gt;
-&lt;div class="highlight-ipynb"&gt;&lt;pre class="ipynb"&gt;&lt;span class="n"&gt;known_model_strings&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="s"&gt;&amp;#39;roms&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;selfe&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;adcirc&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;ncom&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;hycom&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;fvcom&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
-                       &lt;span class="s"&gt;&amp;#39;pom&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;wrams&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;wrf&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt;
+&lt;div class="highlight-ipynb"&gt;&lt;pre class="ipynb"&gt;&lt;span class="n"&gt;known_model_strings&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="s"&gt;&amp;#39;roms&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;selfe&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;adcirc&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;ncom&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+                       &lt;span class="s"&gt;&amp;#39;hycom&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;fvcom&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;pom&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;wrams&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;wrf&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 
 &lt;/div&gt;
 &lt;/div&gt;
 &lt;/div&gt;
 
-&lt;/div&gt;
-&lt;div class="cell border-box-sizing text_cell rendered"&gt;
-&lt;div class="prompt input_prompt"&gt;
-&lt;/div&gt;
-&lt;div class="inner_cell"&gt;
-&lt;div class="text_cell_render border-box-sizing rendered_html"&gt;
-&lt;h3 id="searching-for-models-via-csw-keyword-"&gt;Searching for models via CSW &amp;#39;keyword&amp;#39;&lt;/h3&gt;
-&lt;h4 id="constructhe-fes-filter-we-build-below-is-simpler-than-what-we-did-before-"&gt;ConstrucThe FES filter we build below is simpler than what we did before.&lt;/h4&gt;
-&lt;p&gt;We are only looking for matches in &lt;code&gt;Title&lt;/code&gt; or &lt;code&gt;Subject&lt;/code&gt;that contain the model strings.t CSW Filters&lt;/p&gt;
-&lt;/div&gt;
-&lt;/div&gt;
 &lt;/div&gt;
 &lt;div class="cell border-box-sizing code_cell rendered"&gt;
 &lt;div class="input"&gt;
@@ -1680,10 +1669,10 @@ IlLiNPiJiIiIiIiUuL8BbeQqIVjeQIgAAAAASUVORK5CYII=
 &lt;/div&gt;
 &lt;div class="inner_cell"&gt;
 &lt;div class="text_cell_render border-box-sizing rendered_html"&gt;
-&lt;p&gt;We can note that some service types URNs for the same service type are being identified differently!&lt;/p&gt;
+&lt;p&gt;We can note that some identical services types URNs are being identified differently!&lt;/p&gt;
 &lt;p&gt;There should be a consistent way of representing each service,
 or a &lt;a href="https://github.com/ioos/system-test/issues/57"&gt;mapping&lt;/a&gt; needs to be made available.&lt;/p&gt;
-&lt;p&gt;We can try to get around the issue of the same services being identified differently by relying on the &amp;quot;Scheme&amp;quot; metadata field.&lt;/p&gt;
+&lt;p&gt;We can try to get around the issue of the same services being identified differently by relying on the &lt;code&gt;&amp;quot;Scheme&amp;quot;&lt;/code&gt; metadata field.&lt;/p&gt;
 &lt;/div&gt;
 &lt;/div&gt;
 &lt;/div&gt;
@@ -9082,8 +9071,8 @@ iIiIiIhICVPjLiIiIiIiIlLC1LiLiIiIiIiIlLA/CRKxytd0nIAAAAAASUVORK5CYII=
 &lt;/div&gt;
 &lt;div class="inner_cell"&gt;
 &lt;div class="text_cell_render border-box-sizing rendered_html"&gt;
-&lt;p&gt;Query several catalogs like we did in this notebook is very slow.
-This approach should be used only to help to determine which catalog we can use after we know what what type of data and service we need.&lt;/p&gt;
+&lt;p&gt;Querying several catalogs like we did in this notebook is very slow.
+This approach should be used only to help to determine which catalog we can use after we know what type of data and service we need.&lt;/p&gt;
 &lt;/div&gt;
 &lt;/div&gt;
 &lt;/div&gt;
