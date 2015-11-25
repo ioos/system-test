@@ -1,5 +1,402 @@
 <?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>system-test</title><link href="https://ioos.github.io/system-test/" rel="alternate"></link><link href="http://ioos.github.io/system-test//feeds/misc.atom.xml" rel="self"></link><id>https://ioos.github.io/system-test/</id><updated>2015-11-09T12:37:00-05:00</updated><entry><title>What information is available?</title><link href="https://ioos.github.io/system-test/blog/2015/11/09/Scenario_1A_Model_Strings/" rel="alternate"></link><updated>2015-11-09T12:37:00-05:00</updated><author><name>IOOS</name></author><id>tag:https://ioos.github.io/system-test,2015-11-09:blog/2015/11/09/Scenario_1A_Model_Strings/</id><summary type="html">&lt;p&gt;
+<feed xmlns="http://www.w3.org/2005/Atom"><title>system-test</title><link href="https://ioos.github.io/system-test/" rel="alternate"></link><link href="http://ioos.github.io/system-test//feeds/misc.atom.xml" rel="self"></link><id>https://ioos.github.io/system-test/</id><updated>2015-11-23T15:57:00-05:00</updated><entry><title>Catalog based on the IOOS Regional Associations acronyms</title><link href="https://ioos.github.io/system-test/blog/2015/11/23/NGDC_CSW_QueryForIOOSRAs/" rel="alternate"></link><updated>2015-11-23T15:57:00-05:00</updated><author><name>IOOS</name></author><id>tag:https://ioos.github.io/system-test,2015-11-23:blog/2015/11/23/NGDC_CSW_QueryForIOOSRAs/</id><summary type="html">&lt;p&gt;
+&lt;div class="cell border-box-sizing text_cell rendered"&gt;
+&lt;div class="prompt input_prompt"&gt;
+&lt;/div&gt;
+&lt;div class="inner_cell"&gt;
+&lt;div class="text_cell_render border-box-sizing rendered_html"&gt;
+&lt;p&gt;The goal of this post is to investigate if it is possible to query the NGDC CSW Catalog to extract records matching an IOOS RA acronym, like SECOORA for example.&lt;/p&gt;
+&lt;p&gt;In the cell above we do the usual: instantiate a Catalogue Service Web (&lt;code&gt;csw&lt;/code&gt;) using the &lt;a href="https://www.ngdc.noaa.gov/"&gt;NGDC&lt;/a&gt; catalog endpoint.&lt;/p&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class="cell border-box-sizing code_cell rendered"&gt;
+&lt;div class="input"&gt;
+&lt;div class="prompt input_prompt"&gt;In&amp;nbsp;[3]:&lt;/div&gt;
+&lt;div class="inner_cell"&gt;
+    &lt;div class="input_area"&gt;
+&lt;div class="highlight-ipynb"&gt;&lt;pre class="ipynb"&gt;&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;owslib.csw&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="n"&gt;CatalogueServiceWeb&lt;/span&gt;
+
+&lt;span class="n"&gt;endpoint&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;http://www.ngdc.noaa.gov/geoportal/csw&amp;#39;&lt;/span&gt;
+&lt;span class="n"&gt;csw&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;CatalogueServiceWeb&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;endpoint&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;timeout&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="mi"&gt;30&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;div class="cell border-box-sizing text_cell rendered"&gt;
+&lt;div class="prompt input_prompt"&gt;
+&lt;/div&gt;
+&lt;div class="inner_cell"&gt;
+&lt;div class="text_cell_render border-box-sizing rendered_html"&gt;
+&lt;p&gt;We need a list of all the Regional Associations I know. (With a little help of Google of course ;-)&lt;/p&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class="cell border-box-sizing code_cell rendered"&gt;
+&lt;div class="input"&gt;
+&lt;div class="prompt input_prompt"&gt;In&amp;nbsp;[4]:&lt;/div&gt;
+&lt;div class="inner_cell"&gt;
+    &lt;div class="input_area"&gt;
+&lt;div class="highlight-ipynb"&gt;&lt;pre class="ipynb"&gt;&lt;span class="n"&gt;ioos_ras&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="s"&gt;&amp;#39;AOOS&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;      &lt;span class="c"&gt;# Alaska&lt;/span&gt;
+            &lt;span class="s"&gt;&amp;#39;CaRA&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;      &lt;span class="c"&gt;# Caribbean&lt;/span&gt;
+            &lt;span class="s"&gt;&amp;#39;CeNCOOS&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;   &lt;span class="c"&gt;# Central and Northern California&lt;/span&gt;
+            &lt;span class="s"&gt;&amp;#39;GCOOS&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;     &lt;span class="c"&gt;# Gulf of Mexico&lt;/span&gt;
+            &lt;span class="s"&gt;&amp;#39;GLOS&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;      &lt;span class="c"&gt;# Great Lakes&lt;/span&gt;
+            &lt;span class="s"&gt;&amp;#39;MARACOOS&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;  &lt;span class="c"&gt;# Mid-Atlantic&lt;/span&gt;
+            &lt;span class="s"&gt;&amp;#39;NANOOS&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;    &lt;span class="c"&gt;# Pacific Northwest &lt;/span&gt;
+            &lt;span class="s"&gt;&amp;#39;NERACOOS&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;  &lt;span class="c"&gt;# Northeast Atlantic &lt;/span&gt;
+            &lt;span class="s"&gt;&amp;#39;PacIOOS&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;   &lt;span class="c"&gt;# Pacific Islands &lt;/span&gt;
+            &lt;span class="s"&gt;&amp;#39;SCCOOS&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;    &lt;span class="c"&gt;# Southern California&lt;/span&gt;
+            &lt;span class="s"&gt;&amp;#39;SECOORA&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt;   &lt;span class="c"&gt;# Southeast Atlantic&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;div class="cell border-box-sizing text_cell rendered"&gt;
+&lt;div class="prompt input_prompt"&gt;
+&lt;/div&gt;
+&lt;div class="inner_cell"&gt;
+&lt;div class="text_cell_render border-box-sizing rendered_html"&gt;
+&lt;p&gt;To streamline the query we can create a function that creates the &lt;code&gt;fes&lt;/code&gt; filter and returns the records.&lt;/p&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class="cell border-box-sizing code_cell rendered"&gt;
+&lt;div class="input"&gt;
+&lt;div class="prompt input_prompt"&gt;In&amp;nbsp;[5]:&lt;/div&gt;
+&lt;div class="inner_cell"&gt;
+    &lt;div class="input_area"&gt;
+&lt;div class="highlight-ipynb"&gt;&lt;pre class="ipynb"&gt;&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;owslib.fes&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="n"&gt;PropertyIsEqualTo&lt;/span&gt;
+
+&lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;query_ra&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;csw&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;ra&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s"&gt;&amp;#39;SECOORA&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+    &lt;span class="n"&gt;q&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;PropertyIsEqualTo&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;propertyname&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s"&gt;&amp;#39;apiso:Keywords&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;literal&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="n"&gt;ra&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="n"&gt;csw&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;getrecords2&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;constraints&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="n"&gt;q&lt;/span&gt;&lt;span class="p"&gt;],&lt;/span&gt; &lt;span class="n"&gt;maxrecords&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="mi"&gt;100&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;esn&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s"&gt;&amp;#39;full&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="n"&gt;csw&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;/div&gt;
+                Here is what we got:
+                
+&lt;div class="cell border-box-sizing code_cell rendered"&gt;
+&lt;div class="input"&gt;
+&lt;div class="prompt input_prompt"&gt;In&amp;nbsp;[6]:&lt;/div&gt;
+&lt;div class="inner_cell"&gt;
+    &lt;div class="input_area"&gt;
+&lt;div class="highlight-ipynb"&gt;&lt;pre class="ipynb"&gt;&lt;span class="k"&gt;for&lt;/span&gt; &lt;span class="n"&gt;ra&lt;/span&gt; &lt;span class="ow"&gt;in&lt;/span&gt; &lt;span class="n"&gt;ioos_ras&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+    &lt;span class="n"&gt;csw&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;query_ra&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;csw&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;ra&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="n"&gt;ret&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;csw&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;results&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="s"&gt;&amp;#39;returned&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt;
+    &lt;span class="n"&gt;word&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;records&amp;#39;&lt;/span&gt; &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="n"&gt;ret&lt;/span&gt; &lt;span class="o"&gt;&amp;gt;&lt;/span&gt; &lt;span class="mi"&gt;1&lt;/span&gt; &lt;span class="k"&gt;else&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;record&amp;#39;&lt;/span&gt;
+    &lt;span class="k"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;{0:&amp;gt;8} has {1:&amp;gt;3} {2}&amp;quot;&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;format&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;ra&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;ret&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;word&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
+    &lt;span class="n"&gt;csw&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;records&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;clear&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;div class="output_wrapper"&gt;
+&lt;div class="output"&gt;
+
+
+&lt;div class="output_area"&gt;&lt;div class="prompt"&gt;&lt;/div&gt;
+&lt;div class="output_subarea output_stream output_stdout output_text"&gt;
+&lt;pre&gt;
+    AOOS has   1 record
+    CaRA has   0 record
+ CeNCOOS has   7 records
+   GCOOS has   5 records
+    GLOS has  15 records
+MARACOOS has 100 records
+  NANOOS has   1 record
+NERACOOS has 100 records
+ PacIOOS has   0 record
+  SCCOOS has  23 records
+ SECOORA has  71 records
+
+&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;div class="cell border-box-sizing text_cell rendered"&gt;
+&lt;div class="prompt input_prompt"&gt;
+&lt;/div&gt;
+&lt;div class="inner_cell"&gt;
+&lt;div class="text_cell_render border-box-sizing rendered_html"&gt;
+&lt;p&gt;I would not trust those number completely.
+Surely some of the RA listed above have more than 0/1 record.&lt;/p&gt;
+&lt;p&gt;Note that we have more information in the &lt;code&gt;csw.records&lt;/code&gt;.
+Let&amp;#39;s inspect one of SECOORA&amp;#39;s stations for example.&lt;/p&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class="cell border-box-sizing code_cell rendered"&gt;
+&lt;div class="input"&gt;
+&lt;div class="prompt input_prompt"&gt;In&amp;nbsp;[7]:&lt;/div&gt;
+&lt;div class="inner_cell"&gt;
+    &lt;div class="input_area"&gt;
+&lt;div class="highlight-ipynb"&gt;&lt;pre class="ipynb"&gt;&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;utilities&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="n"&gt;get_coops_metadata&lt;/span&gt;
+
+&lt;span class="n"&gt;csw&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;query_ra&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;csw&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;SECOORA&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="n"&gt;key&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;csw&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;records&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;keys&lt;/span&gt;&lt;span class="p"&gt;()[&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt;
+
+&lt;span class="k"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;key&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;div class="output_wrapper"&gt;
+&lt;div class="output"&gt;
+
+
+&lt;div class="output_area"&gt;&lt;div class="prompt"&gt;&lt;/div&gt;
+&lt;div class="output_subarea output_stream output_stdout output_text"&gt;
+&lt;pre&gt;
+id_usf.tas.ngwlms
+
+&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;div class="cell border-box-sizing text_cell rendered"&gt;
+&lt;div class="prompt input_prompt"&gt;
+&lt;/div&gt;
+&lt;div class="inner_cell"&gt;
+&lt;div class="text_cell_render border-box-sizing rendered_html"&gt;
+&lt;p&gt;We can verify the station type, title, and last date of modification.&lt;/p&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class="cell border-box-sizing code_cell rendered"&gt;
+&lt;div class="input"&gt;
+&lt;div class="prompt input_prompt"&gt;In&amp;nbsp;[8]:&lt;/div&gt;
+&lt;div class="inner_cell"&gt;
+    &lt;div class="input_area"&gt;
+&lt;div class="highlight-ipynb"&gt;&lt;pre class="ipynb"&gt;&lt;span class="n"&gt;station&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;csw&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;records&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="n"&gt;key&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt;
+
+&lt;span class="n"&gt;station&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;type&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;station&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;title&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;station&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;modified&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;div class="output_wrapper"&gt;
+&lt;div class="output"&gt;
+
+
+&lt;div class="output_area"&gt;&lt;div class="prompt output_prompt"&gt;Out[8]:&lt;/div&gt;
+
+
+&lt;div class="output_text output_subarea output_pyout"&gt;
+&lt;pre&gt;
+(&amp;apos;downloadableData&amp;apos;, &amp;apos;usf.tas.ngwlms&amp;apos;, &amp;apos;2015-11-25T01:32:42-07:00&amp;apos;)
+&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;div class="cell border-box-sizing text_cell rendered"&gt;
+&lt;div class="prompt input_prompt"&gt;
+&lt;/div&gt;
+&lt;div class="inner_cell"&gt;
+&lt;div class="text_cell_render border-box-sizing rendered_html"&gt;
+&lt;p&gt;The &lt;code&gt;subjects&lt;/code&gt; field contains the variables and some useful keywords.&lt;/p&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class="cell border-box-sizing code_cell rendered"&gt;
+&lt;div class="input"&gt;
+&lt;div class="prompt input_prompt"&gt;In&amp;nbsp;[9]:&lt;/div&gt;
+&lt;div class="inner_cell"&gt;
+    &lt;div class="input_area"&gt;
+&lt;div class="highlight-ipynb"&gt;&lt;pre class="ipynb"&gt;&lt;span class="n"&gt;station&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;subjects&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;div class="output_wrapper"&gt;
+&lt;div class="output"&gt;
+
+
+&lt;div class="output_area"&gt;&lt;div class="prompt output_prompt"&gt;Out[9]:&lt;/div&gt;
+
+
+&lt;div class="output_text output_subarea output_pyout"&gt;
+&lt;pre&gt;
+[&amp;apos;air_pressure&amp;apos;,
+ &amp;apos;air_temperature&amp;apos;,
+ &amp;apos;water_surface_height_above_reference_datum&amp;apos;,
+ &amp;apos;wind_from_direction&amp;apos;,
+ &amp;apos;wind_speed_of_gust&amp;apos;,
+ &amp;apos;wind_speed&amp;apos;,
+ &amp;apos;SECOORA&amp;apos;,
+ &amp;apos;air_pressure&amp;apos;,
+ &amp;apos;air_temperature&amp;apos;,
+ &amp;apos;water_surface_height_above_reference_datum&amp;apos;,
+ &amp;apos;wind_from_direction&amp;apos;,
+ &amp;apos;wind_speed_of_gust&amp;apos;,
+ &amp;apos;wind_speed&amp;apos;,
+ &amp;apos;latitude&amp;apos;,
+ &amp;apos;longitude&amp;apos;,
+ &amp;apos;time&amp;apos;,
+ &amp;apos;climatologyMeteorologyAtmosphere&amp;apos;]
+&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;div class="cell border-box-sizing text_cell rendered"&gt;
+&lt;div class="prompt input_prompt"&gt;
+&lt;/div&gt;
+&lt;div class="inner_cell"&gt;
+&lt;div class="text_cell_render border-box-sizing rendered_html"&gt;
+&lt;p&gt;And we can access the full &lt;code&gt;XML&lt;/code&gt; description for the station.&lt;/p&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class="cell border-box-sizing code_cell rendered"&gt;
+&lt;div class="input"&gt;
+&lt;div class="prompt input_prompt"&gt;In&amp;nbsp;[10]:&lt;/div&gt;
+&lt;div class="inner_cell"&gt;
+    &lt;div class="input_area"&gt;
+&lt;div class="highlight-ipynb"&gt;&lt;pre class="ipynb"&gt;&lt;span class="k"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;station&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;xml&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;div class="output_wrapper"&gt;
+&lt;div class="output"&gt;
+
+
+&lt;div class="output_area"&gt;&lt;div class="prompt"&gt;&lt;/div&gt;
+&lt;div class="output_subarea output_stream output_stdout output_text"&gt;
+&lt;pre&gt;
+&amp;lt;csw:Record xmlns:csw=&amp;quot;http://www.opengis.net/cat/csw/2.0.2&amp;quot; xmlns:dc=&amp;quot;http://purl.org/dc/elements/1.1/&amp;quot; xmlns:dcmiBox=&amp;quot;http://dublincore.org/documents/2000/07/11/dcmi-box/&amp;quot; xmlns:dct=&amp;quot;http://purl.org/dc/terms/&amp;quot; xmlns:gml=&amp;quot;http://www.opengis.net/gml&amp;quot; xmlns:ows=&amp;quot;http://www.opengis.net/ows&amp;quot; xmlns:xsd=&amp;quot;http://www.w3.org/2001/XMLSchema&amp;quot;&amp;gt;
+&amp;lt;dc:identifier scheme=&amp;quot;urn:x-esri:specification:ServiceType:ArcIMS:Metadata:FileID&amp;quot;&amp;gt;id_usf.tas.ngwlms&amp;lt;/dc:identifier&amp;gt;
+&amp;lt;dc:identifier scheme=&amp;quot;urn:x-esri:specification:ServiceType:ArcIMS:Metadata:DocID&amp;quot;&amp;gt;{9DDE8E32-EB36-4E72-B2CC-A47D51151271}&amp;lt;/dc:identifier&amp;gt;
+&amp;lt;dc:title&amp;gt;usf.tas.ngwlms&amp;lt;/dc:title&amp;gt;
+&amp;lt;dc:type scheme=&amp;quot;urn:x-esri:specification:ServiceType:ArcIMS:Metadata:ContentType&amp;quot;&amp;gt;downloadableData&amp;lt;/dc:type&amp;gt;
+&amp;lt;dc:type scheme=&amp;quot;urn:x-esri:specification:ServiceType:ArcIMS:Metadata:ContentType&amp;quot;&amp;gt;liveData&amp;lt;/dc:type&amp;gt;
+&amp;lt;dc:subject&amp;gt;air_pressure&amp;lt;/dc:subject&amp;gt;
+&amp;lt;dc:subject&amp;gt;air_temperature&amp;lt;/dc:subject&amp;gt;
+&amp;lt;dc:subject&amp;gt;water_surface_height_above_reference_datum&amp;lt;/dc:subject&amp;gt;
+&amp;lt;dc:subject&amp;gt;wind_from_direction&amp;lt;/dc:subject&amp;gt;
+&amp;lt;dc:subject&amp;gt;wind_speed_of_gust&amp;lt;/dc:subject&amp;gt;
+&amp;lt;dc:subject&amp;gt;wind_speed&amp;lt;/dc:subject&amp;gt;
+&amp;lt;dc:subject&amp;gt;SECOORA&amp;lt;/dc:subject&amp;gt;
+&amp;lt;dc:subject&amp;gt;air_pressure&amp;lt;/dc:subject&amp;gt;
+&amp;lt;dc:subject&amp;gt;air_temperature&amp;lt;/dc:subject&amp;gt;
+&amp;lt;dc:subject&amp;gt;water_surface_height_above_reference_datum&amp;lt;/dc:subject&amp;gt;
+&amp;lt;dc:subject&amp;gt;wind_from_direction&amp;lt;/dc:subject&amp;gt;
+&amp;lt;dc:subject&amp;gt;wind_speed_of_gust&amp;lt;/dc:subject&amp;gt;
+&amp;lt;dc:subject&amp;gt;wind_speed&amp;lt;/dc:subject&amp;gt;
+&amp;lt;dc:subject&amp;gt;latitude&amp;lt;/dc:subject&amp;gt;
+&amp;lt;dc:subject&amp;gt;longitude&amp;lt;/dc:subject&amp;gt;
+&amp;lt;dc:subject&amp;gt;time&amp;lt;/dc:subject&amp;gt;
+&amp;lt;dc:subject&amp;gt;climatologyMeteorologyAtmosphere&amp;lt;/dc:subject&amp;gt;
+&amp;lt;dct:modified&amp;gt;2015-11-25T01:32:42-07:00&amp;lt;/dct:modified&amp;gt;
+&amp;lt;dct:references scheme=&amp;quot;urn:x-esri:specification:ServiceType:distribution:url&amp;quot;&amp;gt;http://tds.secoora.org/thredds/dodsC/usf.tas.ngwlms.nc.html&amp;lt;/dct:references&amp;gt;
+&amp;lt;dct:references scheme=&amp;quot;urn:x-esri:specification:ServiceType:distribution:url&amp;quot;&amp;gt;http://www.ncdc.noaa.gov/oa/wct/wct-jnlp-beta.php?singlefile=http://tds.secoora.org/thredds/dodsC/usf.tas.ngwlms.nc&amp;lt;/dct:references&amp;gt;
+&amp;lt;dct:references scheme=&amp;quot;urn:x-esri:specification:ServiceType:sos:url&amp;quot;&amp;gt;http://tds.secoora.org/thredds/sos/usf.tas.ngwlms.nc?service=SOS&amp;amp;amp;version=1.0.0&amp;amp;amp;request=GetCapabilities&amp;lt;/dct:references&amp;gt;
+&amp;lt;dct:references scheme=&amp;quot;urn:x-esri:specification:ServiceType:odp:url&amp;quot;&amp;gt;http://tds.secoora.org/thredds/dodsC/usf.tas.ngwlms.nc&amp;lt;/dct:references&amp;gt;
+&amp;lt;dct:references scheme=&amp;quot;urn:x-esri:specification:ServiceType:download:url&amp;quot;&amp;gt;http://tds.secoora.org/thredds/dodsC/usf.tas.ngwlms.nc.html&amp;lt;/dct:references&amp;gt;
+&amp;lt;ows:WGS84BoundingBox&amp;gt;
+&amp;lt;ows:LowerCorner&amp;gt;-82.75800323486328 28.1560001373291&amp;lt;/ows:LowerCorner&amp;gt;
+&amp;lt;ows:UpperCorner&amp;gt;-82.75800323486328 28.1560001373291&amp;lt;/ows:UpperCorner&amp;gt;
+&amp;lt;/ows:WGS84BoundingBox&amp;gt;
+&amp;lt;ows:BoundingBox&amp;gt;
+&amp;lt;ows:LowerCorner&amp;gt;-82.75800323486328 28.1560001373291&amp;lt;/ows:LowerCorner&amp;gt;
+&amp;lt;ows:UpperCorner&amp;gt;-82.75800323486328 28.1560001373291&amp;lt;/ows:UpperCorner&amp;gt;
+&amp;lt;/ows:BoundingBox&amp;gt;
+&amp;lt;dc:source&amp;gt;{B3EA8869-B726-4E39-898A-299E53ABBC98}&amp;lt;/dc:source&amp;gt;
+&amp;lt;/csw:Record&amp;gt;
+
+
+&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;div class="cell border-box-sizing text_cell rendered"&gt;
+&lt;div class="prompt input_prompt"&gt;
+&lt;/div&gt;
+&lt;div class="inner_cell"&gt;
+&lt;div class="text_cell_render border-box-sizing rendered_html"&gt;
+&lt;p&gt;This query is very simple but also very powerful.
+We can quickly assess the data available for a certain Regional Association data with just a few line of code.&lt;/p&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class="cell border-box-sizing code_cell rendered"&gt;
+&lt;div class="input"&gt;
+&lt;div class="prompt input_prompt"&gt;In&amp;nbsp;[11]:&lt;/div&gt;
+&lt;div class="inner_cell"&gt;
+    &lt;div class="input_area"&gt;
+&lt;div class="highlight-ipynb"&gt;&lt;pre class="ipynb"&gt;&lt;span class="n"&gt;HTML&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;html&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;div class="output_wrapper"&gt;
+&lt;div class="output"&gt;
+
+
+&lt;div class="output_area"&gt;&lt;div class="prompt output_prompt"&gt;Out[11]:&lt;/div&gt;
+
+&lt;div class="output_html rendered_html output_subarea output_pyout"&gt;
+
+&lt;small&gt;
+&lt;p&gt; This post was written as an IPython notebook.  It is available for
+&lt;a href="http://ioos.github.com/system-test/downloads/
+notebooks/2015-11-23-NGDC_CSW_QueryForIOOSRAs.ipynb"&gt;download&lt;/a&gt; or
+&lt;a href="http://mybinder.org/repo/ioos/system-test/"&gt;run it on binder&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;&lt;/p&gt;
+
+&lt;/div&gt;
+
+&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;/div&gt;&lt;/p&gt;</summary></entry><entry><title>What information is available?</title><link href="https://ioos.github.io/system-test/blog/2015/11/09/Scenario_1A_Model_Strings/" rel="alternate"></link><updated>2015-11-09T12:37:00-05:00</updated><author><name>IOOS</name></author><id>tag:https://ioos.github.io/system-test,2015-11-09:blog/2015/11/09/Scenario_1A_Model_Strings/</id><summary type="html">&lt;p&gt;
 &lt;div class="cell border-box-sizing text_cell rendered"&gt;
 &lt;div class="prompt input_prompt"&gt;
 &lt;/div&gt;

@@ -4,7 +4,7 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>system-test Archive </title>
+  <title>Catalog based on the IOOS Regional Associations acronyms</title>
   <meta name="author" content="IOOS">
 
   <link href="http://ioos.github.io/system-test//atom.xml" type="application/atom+xml" rel="alternate"
@@ -1755,85 +1755,425 @@ jQuery(document).ready(function($) {
   <div id="main">
     <div id="content">
 <div>
-	<article role="article">
-    	<header>
-    		<h1 class="entry-title">Blog Archive</h1>
-    	</header>
+  <article class="hentry" role="article">
+<header>
+      <h1 class="entry-title">Catalog based on the IOOS Regional Associations acronyms</h1>
+      <p class="meta"><time datetime="2015-11-23T15:57:00" pubdate>Nov 23, 2015</time></p>
+</header>
 
-    	<div id="blog-archives">
-            <h2>2015</h2>
-                    <article>
-                        <h1><a href="https://ioos.github.io/system-test/blog/2015/11/23/NGDC_CSW_QueryForIOOSRAs/">Catalog based on the IOOS Regional Associations acronyms</a></h1>
-                        <time datetime="2015-11-23 15:57:00" pubdate>
-                            <span class="month">Nov</span>
-                            <span class="day">23</span>
-                            <span class="year">2015</span>
-                        </time>
-                        <footer>
-                            <span class="categories">posted in
-                                <a class='category' href='https://ioos.github.io/system-test/category/misc.html'>misc</a>
-                                
-                            </span>
-                        </footer>
-                    </article>
-                    <article>
-                        <h1><a href="https://ioos.github.io/system-test/blog/2015/11/09/Scenario_1A_Model_Strings/">What information is available?</a></h1>
-                        <time datetime="2015-11-09 12:37:00" pubdate>
-                            <span class="month">Nov</span>
-                            <span class="day">09</span>
-                            <span class="year">2015</span>
-                        </time>
-                        <footer>
-                            <span class="categories">posted in
-                                <a class='category' href='https://ioos.github.io/system-test/category/misc.html'>misc</a>
-                                
-                            </span>
-                        </footer>
-                    </article>
-                    <article>
-                        <h1><a href="https://ioos.github.io/system-test/blog/2015/10/26/HF_Radar_Currents_west_coast/">Near real-time current data</a></h1>
-                        <time datetime="2015-10-26 14:34:00" pubdate>
-                            <span class="month">Oct</span>
-                            <span class="day">26</span>
-                            <span class="year">2015</span>
-                        </time>
-                        <footer>
-                            <span class="categories">posted in
-                                <a class='category' href='https://ioos.github.io/system-test/category/misc.html'>misc</a>
-                                
-                            </span>
-                        </footer>
-                    </article>
-                    <article>
-                        <h1><a href="https://ioos.github.io/system-test/blog/2015/10/12/fetching_data/">Fetching data from a CSW catalog</a></h1>
-                        <time datetime="2015-10-12 23:05:00" pubdate>
-                            <span class="month">Oct</span>
-                            <span class="day">12</span>
-                            <span class="year">2015</span>
-                        </time>
-                        <footer>
-                            <span class="categories">posted in
-                                <a class='category' href='https://ioos.github.io/system-test/category/misc.html'>misc</a>
-                                
-                            </span>
-                        </footer>
-                    </article>
-                    <article>
-                        <h1><a href="https://ioos.github.io/system-test/blog/2015/09/28/OpeningPost/">Opening post</a></h1>
-                        <time datetime="2015-09-28 23:09:00" pubdate>
-                            <span class="month">Sep</span>
-                            <span class="day">28</span>
-                            <span class="year">2015</span>
-                        </time>
-                        <footer>
-                            <span class="categories">posted in
-                                <a class='category' href='https://ioos.github.io/system-test/category/misc.html'>misc</a>
-                                
-                            </span>
-                        </footer>
-                    </article>
-	    </div>
-    </article>
+  <div class="entry-content"><p>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>The goal of this post is to investigate if it is possible to query the NGDC CSW Catalog to extract records matching an IOOS RA acronym, like SECOORA for example.</p>
+<p>In the cell above we do the usual: instantiate a Catalogue Service Web (<code>csw</code>) using the <a href="https://www.ngdc.noaa.gov/">NGDC</a> catalog endpoint.</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[3]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class="highlight-ipynb"><pre class="ipynb"><span class="kn">from</span> <span class="nn">owslib.csw</span> <span class="kn">import</span> <span class="n">CatalogueServiceWeb</span>
+
+<span class="n">endpoint</span> <span class="o">=</span> <span class="s">&#39;http://www.ngdc.noaa.gov/geoportal/csw&#39;</span>
+<span class="n">csw</span> <span class="o">=</span> <span class="n">CatalogueServiceWeb</span><span class="p">(</span><span class="n">endpoint</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">30</span><span class="p">)</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>We need a list of all the Regional Associations I know. (With a little help of Google of course ;-)</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[4]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class="highlight-ipynb"><pre class="ipynb"><span class="n">ioos_ras</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;AOOS&#39;</span><span class="p">,</span>      <span class="c"># Alaska</span>
+            <span class="s">&#39;CaRA&#39;</span><span class="p">,</span>      <span class="c"># Caribbean</span>
+            <span class="s">&#39;CeNCOOS&#39;</span><span class="p">,</span>   <span class="c"># Central and Northern California</span>
+            <span class="s">&#39;GCOOS&#39;</span><span class="p">,</span>     <span class="c"># Gulf of Mexico</span>
+            <span class="s">&#39;GLOS&#39;</span><span class="p">,</span>      <span class="c"># Great Lakes</span>
+            <span class="s">&#39;MARACOOS&#39;</span><span class="p">,</span>  <span class="c"># Mid-Atlantic</span>
+            <span class="s">&#39;NANOOS&#39;</span><span class="p">,</span>    <span class="c"># Pacific Northwest </span>
+            <span class="s">&#39;NERACOOS&#39;</span><span class="p">,</span>  <span class="c"># Northeast Atlantic </span>
+            <span class="s">&#39;PacIOOS&#39;</span><span class="p">,</span>   <span class="c"># Pacific Islands </span>
+            <span class="s">&#39;SCCOOS&#39;</span><span class="p">,</span>    <span class="c"># Southern California</span>
+            <span class="s">&#39;SECOORA&#39;</span><span class="p">]</span>   <span class="c"># Southeast Atlantic</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>To streamline the query we can create a function that creates the <code>fes</code> filter and returns the records.</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[5]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class="highlight-ipynb"><pre class="ipynb"><span class="kn">from</span> <span class="nn">owslib.fes</span> <span class="kn">import</span> <span class="n">PropertyIsEqualTo</span>
+
+<span class="k">def</span> <span class="nf">query_ra</span><span class="p">(</span><span class="n">csw</span><span class="p">,</span> <span class="n">ra</span><span class="o">=</span><span class="s">&#39;SECOORA&#39;</span><span class="p">):</span>
+    <span class="n">q</span> <span class="o">=</span> <span class="n">PropertyIsEqualTo</span><span class="p">(</span><span class="n">propertyname</span><span class="o">=</span><span class="s">&#39;apiso:Keywords&#39;</span><span class="p">,</span> <span class="n">literal</span><span class="o">=</span><span class="n">ra</span><span class="p">)</span>
+    <span class="n">csw</span><span class="o">.</span><span class="n">getrecords2</span><span class="p">(</span><span class="n">constraints</span><span class="o">=</span><span class="p">[</span><span class="n">q</span><span class="p">],</span> <span class="n">maxrecords</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">esn</span><span class="o">=</span><span class="s">&#39;full&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">csw</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+</div>
+                Here is what we got:
+                
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[6]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class="highlight-ipynb"><pre class="ipynb"><span class="k">for</span> <span class="n">ra</span> <span class="ow">in</span> <span class="n">ioos_ras</span><span class="p">:</span>
+    <span class="n">csw</span> <span class="o">=</span> <span class="n">query_ra</span><span class="p">(</span><span class="n">csw</span><span class="p">,</span> <span class="n">ra</span><span class="p">)</span>
+    <span class="n">ret</span> <span class="o">=</span> <span class="n">csw</span><span class="o">.</span><span class="n">results</span><span class="p">[</span><span class="s">&#39;returned&#39;</span><span class="p">]</span>
+    <span class="n">word</span> <span class="o">=</span> <span class="s">&#39;records&#39;</span> <span class="k">if</span> <span class="n">ret</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="k">else</span> <span class="s">&#39;record&#39;</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">&quot;{0:&gt;8} has {1:&gt;3} {2}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">ra</span><span class="p">,</span> <span class="n">ret</span><span class="p">,</span> <span class="n">word</span><span class="p">))</span>
+    <span class="n">csw</span><span class="o">.</span><span class="n">records</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area"><div class="prompt"></div>
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>
+    AOOS has   1 record
+    CaRA has   0 record
+ CeNCOOS has   7 records
+   GCOOS has   5 records
+    GLOS has  15 records
+MARACOOS has 100 records
+  NANOOS has   1 record
+NERACOOS has 100 records
+ PacIOOS has   0 record
+  SCCOOS has  23 records
+ SECOORA has  71 records
+
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>I would not trust those number completely.
+Surely some of the RA listed above have more than 0/1 record.</p>
+<p>Note that we have more information in the <code>csw.records</code>.
+Let&#39;s inspect one of SECOORA&#39;s stations for example.</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[7]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class="highlight-ipynb"><pre class="ipynb"><span class="kn">from</span> <span class="nn">utilities</span> <span class="kn">import</span> <span class="n">get_coops_metadata</span>
+
+<span class="n">csw</span> <span class="o">=</span> <span class="n">query_ra</span><span class="p">(</span><span class="n">csw</span><span class="p">,</span> <span class="s">&#39;SECOORA&#39;</span><span class="p">)</span>
+<span class="n">key</span> <span class="o">=</span> <span class="n">csw</span><span class="o">.</span><span class="n">records</span><span class="o">.</span><span class="n">keys</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+
+<span class="k">print</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area"><div class="prompt"></div>
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>
+id_usf.tas.ngwlms
+
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>We can verify the station type, title, and last date of modification.</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[8]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class="highlight-ipynb"><pre class="ipynb"><span class="n">station</span> <span class="o">=</span> <span class="n">csw</span><span class="o">.</span><span class="n">records</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+
+<span class="n">station</span><span class="o">.</span><span class="n">type</span><span class="p">,</span> <span class="n">station</span><span class="o">.</span><span class="n">title</span><span class="p">,</span> <span class="n">station</span><span class="o">.</span><span class="n">modified</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area"><div class="prompt output_prompt">Out[8]:</div>
+
+
+<div class="output_text output_subarea output_pyout">
+<pre>
+(&apos;downloadableData&apos;, &apos;usf.tas.ngwlms&apos;, &apos;2015-11-25T01:32:42-07:00&apos;)
+</pre>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>The <code>subjects</code> field contains the variables and some useful keywords.</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[9]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class="highlight-ipynb"><pre class="ipynb"><span class="n">station</span><span class="o">.</span><span class="n">subjects</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area"><div class="prompt output_prompt">Out[9]:</div>
+
+
+<div class="output_text output_subarea output_pyout">
+<pre>
+[&apos;air_pressure&apos;,
+ &apos;air_temperature&apos;,
+ &apos;water_surface_height_above_reference_datum&apos;,
+ &apos;wind_from_direction&apos;,
+ &apos;wind_speed_of_gust&apos;,
+ &apos;wind_speed&apos;,
+ &apos;SECOORA&apos;,
+ &apos;air_pressure&apos;,
+ &apos;air_temperature&apos;,
+ &apos;water_surface_height_above_reference_datum&apos;,
+ &apos;wind_from_direction&apos;,
+ &apos;wind_speed_of_gust&apos;,
+ &apos;wind_speed&apos;,
+ &apos;latitude&apos;,
+ &apos;longitude&apos;,
+ &apos;time&apos;,
+ &apos;climatologyMeteorologyAtmosphere&apos;]
+</pre>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>And we can access the full <code>XML</code> description for the station.</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[10]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class="highlight-ipynb"><pre class="ipynb"><span class="k">print</span><span class="p">(</span><span class="n">station</span><span class="o">.</span><span class="n">xml</span><span class="p">)</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area"><div class="prompt"></div>
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>
+&lt;csw:Record xmlns:csw=&quot;http://www.opengis.net/cat/csw/2.0.2&quot; xmlns:dc=&quot;http://purl.org/dc/elements/1.1/&quot; xmlns:dcmiBox=&quot;http://dublincore.org/documents/2000/07/11/dcmi-box/&quot; xmlns:dct=&quot;http://purl.org/dc/terms/&quot; xmlns:gml=&quot;http://www.opengis.net/gml&quot; xmlns:ows=&quot;http://www.opengis.net/ows&quot; xmlns:xsd=&quot;http://www.w3.org/2001/XMLSchema&quot;&gt;
+&lt;dc:identifier scheme=&quot;urn:x-esri:specification:ServiceType:ArcIMS:Metadata:FileID&quot;&gt;id_usf.tas.ngwlms&lt;/dc:identifier&gt;
+&lt;dc:identifier scheme=&quot;urn:x-esri:specification:ServiceType:ArcIMS:Metadata:DocID&quot;&gt;{9DDE8E32-EB36-4E72-B2CC-A47D51151271}&lt;/dc:identifier&gt;
+&lt;dc:title&gt;usf.tas.ngwlms&lt;/dc:title&gt;
+&lt;dc:type scheme=&quot;urn:x-esri:specification:ServiceType:ArcIMS:Metadata:ContentType&quot;&gt;downloadableData&lt;/dc:type&gt;
+&lt;dc:type scheme=&quot;urn:x-esri:specification:ServiceType:ArcIMS:Metadata:ContentType&quot;&gt;liveData&lt;/dc:type&gt;
+&lt;dc:subject&gt;air_pressure&lt;/dc:subject&gt;
+&lt;dc:subject&gt;air_temperature&lt;/dc:subject&gt;
+&lt;dc:subject&gt;water_surface_height_above_reference_datum&lt;/dc:subject&gt;
+&lt;dc:subject&gt;wind_from_direction&lt;/dc:subject&gt;
+&lt;dc:subject&gt;wind_speed_of_gust&lt;/dc:subject&gt;
+&lt;dc:subject&gt;wind_speed&lt;/dc:subject&gt;
+&lt;dc:subject&gt;SECOORA&lt;/dc:subject&gt;
+&lt;dc:subject&gt;air_pressure&lt;/dc:subject&gt;
+&lt;dc:subject&gt;air_temperature&lt;/dc:subject&gt;
+&lt;dc:subject&gt;water_surface_height_above_reference_datum&lt;/dc:subject&gt;
+&lt;dc:subject&gt;wind_from_direction&lt;/dc:subject&gt;
+&lt;dc:subject&gt;wind_speed_of_gust&lt;/dc:subject&gt;
+&lt;dc:subject&gt;wind_speed&lt;/dc:subject&gt;
+&lt;dc:subject&gt;latitude&lt;/dc:subject&gt;
+&lt;dc:subject&gt;longitude&lt;/dc:subject&gt;
+&lt;dc:subject&gt;time&lt;/dc:subject&gt;
+&lt;dc:subject&gt;climatologyMeteorologyAtmosphere&lt;/dc:subject&gt;
+&lt;dct:modified&gt;2015-11-25T01:32:42-07:00&lt;/dct:modified&gt;
+&lt;dct:references scheme=&quot;urn:x-esri:specification:ServiceType:distribution:url&quot;&gt;http://tds.secoora.org/thredds/dodsC/usf.tas.ngwlms.nc.html&lt;/dct:references&gt;
+&lt;dct:references scheme=&quot;urn:x-esri:specification:ServiceType:distribution:url&quot;&gt;http://www.ncdc.noaa.gov/oa/wct/wct-jnlp-beta.php?singlefile=http://tds.secoora.org/thredds/dodsC/usf.tas.ngwlms.nc&lt;/dct:references&gt;
+&lt;dct:references scheme=&quot;urn:x-esri:specification:ServiceType:sos:url&quot;&gt;http://tds.secoora.org/thredds/sos/usf.tas.ngwlms.nc?service=SOS&amp;amp;version=1.0.0&amp;amp;request=GetCapabilities&lt;/dct:references&gt;
+&lt;dct:references scheme=&quot;urn:x-esri:specification:ServiceType:odp:url&quot;&gt;http://tds.secoora.org/thredds/dodsC/usf.tas.ngwlms.nc&lt;/dct:references&gt;
+&lt;dct:references scheme=&quot;urn:x-esri:specification:ServiceType:download:url&quot;&gt;http://tds.secoora.org/thredds/dodsC/usf.tas.ngwlms.nc.html&lt;/dct:references&gt;
+&lt;ows:WGS84BoundingBox&gt;
+&lt;ows:LowerCorner&gt;-82.75800323486328 28.1560001373291&lt;/ows:LowerCorner&gt;
+&lt;ows:UpperCorner&gt;-82.75800323486328 28.1560001373291&lt;/ows:UpperCorner&gt;
+&lt;/ows:WGS84BoundingBox&gt;
+&lt;ows:BoundingBox&gt;
+&lt;ows:LowerCorner&gt;-82.75800323486328 28.1560001373291&lt;/ows:LowerCorner&gt;
+&lt;ows:UpperCorner&gt;-82.75800323486328 28.1560001373291&lt;/ows:UpperCorner&gt;
+&lt;/ows:BoundingBox&gt;
+&lt;dc:source&gt;{B3EA8869-B726-4E39-898A-299E53ABBC98}&lt;/dc:source&gt;
+&lt;/csw:Record&gt;
+
+
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>This query is very simple but also very powerful.
+We can quickly assess the data available for a certain Regional Association data with just a few line of code.</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[11]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class="highlight-ipynb"><pre class="ipynb"><span class="n">HTML</span><span class="p">(</span><span class="n">html</span><span class="p">)</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area"><div class="prompt output_prompt">Out[11]:</div>
+
+<div class="output_html rendered_html output_subarea output_pyout">
+
+<small>
+<p> This post was written as an IPython notebook.  It is available for
+<a href="http://ioos.github.com/system-test/downloads/
+notebooks/2015-11-23-NGDC_CSW_QueryForIOOSRAs.ipynb">download</a> or
+<a href="http://mybinder.org/repo/ioos/system-test/">run it on binder</a>.</p>
+<p></p>
+
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div></p></div>
+    <footer>
+<p class="meta">
+  <span class="byline author vcard">
+    Posted by <span class="fn">IOOS</span>
+  </span>
+<time datetime="2015-11-23T15:57:00" pubdate>Nov 23, 2015</time></p><div class="sharing">
+  <a href="http://twitter.com/share" class="twitter-share-button" data-url="https://ioos.github.io/system-test/blog/2015/11/23/NGDC_CSW_QueryForIOOSRAs/" data-via="usioosgov" data-counturl="ioos.github.io/system-test/blog/2015/11/23/NGDC_CSW_QueryForIOOSRAs/" >Tweet</a>
+    <div class="fb-like" data-send="true" data-width="450" data-show-faces="false"></div>
+</div>    </footer>
+  </article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript></div>
+  </section>
 </div>
 <aside class="sidebar">
   <section>
@@ -1928,6 +2268,9 @@ jQuery(document).ready(function($) {
 </script>
 	<script type="text/javascript">
 	  var disqus_shortname = 'system-test';
+          var disqus_identifier = '/blog/2015/11/23/NGDC_CSW_QueryForIOOSRAs/';
+          var disqus_url = 'https://ioos.github.io/system-test/blog/2015/11/23/NGDC_CSW_QueryForIOOSRAs/';
+          var disqus_title = 'Catalog based on the IOOS Regional Associations acronyms';
 	  (function() {
 	    var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
 	    dsq.src = "//" + disqus_shortname + '.disqus.com/embed.js';
