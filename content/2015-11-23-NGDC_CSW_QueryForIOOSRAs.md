@@ -1,5 +1,5 @@
-Title: Catalog based on the IOOS Regional Associations acronyms
-date:  2015-11-23 15:57
+Title: Catalog based search for the IOOS Regional Associations acronyms
+date:  2015-11-23 16:04
 comments: true
 slug: NGDC_CSW_QueryForIOOSRAs
 
