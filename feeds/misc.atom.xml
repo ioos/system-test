@@ -1,5 +1,202 @@
 <?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>system-test</title><link href="https://ioos.github.io/system-test/" rel="alternate"></link><link href="http://ioos.github.io/system-test//feeds/misc.atom.xml" rel="self"></link><id>https://ioos.github.io/system-test/</id><updated>2015-11-23T16:04:00-05:00</updated><entry><title>Catalog based search for the IOOS Regional Associations acronyms</title><link href="https://ioos.github.io/system-test/blog/2015/11/23/NGDC_CSW_QueryForIOOSRAs/" rel="alternate"></link><updated>2015-11-23T16:04:00-05:00</updated><author><name>IOOS</name></author><id>tag:https://ioos.github.io/system-test,2015-11-23:blog/2015/11/23/NGDC_CSW_QueryForIOOSRAs/</id><summary type="html">&lt;p&gt;
+<feed xmlns="http://www.w3.org/2005/Atom"><title>system-test</title><link href="https://ioos.github.io/system-test/" rel="alternate"></link><link href="http://ioos.github.io/system-test//feeds/misc.atom.xml" rel="self"></link><id>https://ioos.github.io/system-test/</id><updated>2015-12-07T17:52:00-05:00</updated><entry><title>Catalog based search for the IOOS Regional Associations using UUID</title><link href="https://ioos.github.io/system-test/blog/2015/12/07/NGDC_CSW_QueryForIOOSRAs_UUID/" rel="alternate"></link><updated>2015-12-07T17:52:00-05:00</updated><author><name>IOOS</name></author><id>tag:https://ioos.github.io/system-test,2015-12-07:blog/2015/12/07/NGDC_CSW_QueryForIOOSRAs_UUID/</id><summary type="html">&lt;p&gt;
+&lt;div class="cell border-box-sizing text_cell rendered"&gt;
+&lt;div class="prompt input_prompt"&gt;
+&lt;/div&gt;
+&lt;div class="inner_cell"&gt;
+&lt;div class="text_cell_render border-box-sizing rendered_html"&gt;
+&lt;p&gt;In the &lt;a href="https://ioos.github.io/system-test/blog/2015/11/23/NGDC_CSW_QueryForIOOSRAs/"&gt;previous example&lt;/a&gt; we investigated if it was possible to query the NGDC CSW Catalog to extract records matching an IOOS RA acronym.
+However, we could not trust the results.
+Some RAs results in just a few records or no record at all, like AOOS and PacIOOS respectively.&lt;/p&gt;
+&lt;p&gt;We can make a more robust search using the &lt;a href="https://en.wikipedia.org/wiki/Universally_unique_identifier"&gt;UUID&lt;/a&gt; rather than the acronym.
+The advantage is that all records will be associated to an UUID,
+hence a more robust search.
+The disadvantage is that we need to keep track of a long and unintelligible identification.&lt;/p&gt;
+&lt;p&gt;As usual let&amp;#39;s start by instantiating the csw catalog object.&lt;/p&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class="cell border-box-sizing code_cell rendered"&gt;
+&lt;div class="input"&gt;
+&lt;div class="prompt input_prompt"&gt;In&amp;nbsp;[3]:&lt;/div&gt;
+&lt;div class="inner_cell"&gt;
+    &lt;div class="input_area"&gt;
+&lt;div class="highlight-ipynb"&gt;&lt;pre class="ipynb"&gt;&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;owslib.csw&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="n"&gt;CatalogueServiceWeb&lt;/span&gt;
+
+&lt;span class="n"&gt;endpoint&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;http://www.ngdc.noaa.gov/geoportal/csw&amp;#39;&lt;/span&gt;
+&lt;span class="n"&gt;csw&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;CatalogueServiceWeb&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;endpoint&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;timeout&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="mi"&gt;30&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;div class="cell border-box-sizing text_cell rendered"&gt;
+&lt;div class="prompt input_prompt"&gt;
+&lt;/div&gt;
+&lt;div class="inner_cell"&gt;
+&lt;div class="text_cell_render border-box-sizing rendered_html"&gt;
+&lt;p&gt;We will use the same list of all the Regional Associations as before,
+but now we will match them with the corresponding UUID from the &lt;a href="https://github.com/ioos/registry/blob/master/uuid.csv"&gt;IOOS registry&lt;/a&gt;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class="cell border-box-sizing code_cell rendered"&gt;
+&lt;div class="input"&gt;
+&lt;div class="prompt input_prompt"&gt;In&amp;nbsp;[4]:&lt;/div&gt;
+&lt;div class="inner_cell"&gt;
+    &lt;div class="input_area"&gt;
+&lt;div class="highlight-ipynb"&gt;&lt;pre class="ipynb"&gt;&lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;pandas&lt;/span&gt; &lt;span class="kn"&gt;as&lt;/span&gt; &lt;span class="nn"&gt;pd&lt;/span&gt;
+
+&lt;span class="n"&gt;ioos_ras&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="s"&gt;&amp;#39;AOOS&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;      &lt;span class="c"&gt;# Alaska&lt;/span&gt;
+            &lt;span class="s"&gt;&amp;#39;CaRA&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;      &lt;span class="c"&gt;# Caribbean&lt;/span&gt;
+            &lt;span class="s"&gt;&amp;#39;CeNCOOS&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;   &lt;span class="c"&gt;# Central and Northern California&lt;/span&gt;
+            &lt;span class="s"&gt;&amp;#39;GCOOS&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;     &lt;span class="c"&gt;# Gulf of Mexico&lt;/span&gt;
+            &lt;span class="s"&gt;&amp;#39;GLOS&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;      &lt;span class="c"&gt;# Great Lakes&lt;/span&gt;
+            &lt;span class="s"&gt;&amp;#39;MARACOOS&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;  &lt;span class="c"&gt;# Mid-Atlantic&lt;/span&gt;
+            &lt;span class="s"&gt;&amp;#39;NANOOS&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;    &lt;span class="c"&gt;# Pacific Northwest &lt;/span&gt;
+            &lt;span class="s"&gt;&amp;#39;NERACOOS&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;  &lt;span class="c"&gt;# Northeast Atlantic &lt;/span&gt;
+            &lt;span class="s"&gt;&amp;#39;PacIOOS&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;   &lt;span class="c"&gt;# Pacific Islands &lt;/span&gt;
+            &lt;span class="s"&gt;&amp;#39;SCCOOS&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;    &lt;span class="c"&gt;# Southern California&lt;/span&gt;
+            &lt;span class="s"&gt;&amp;#39;SECOORA&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt;   &lt;span class="c"&gt;# Southeast Atlantic&lt;/span&gt;
+
+&lt;span class="n"&gt;url&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;https://raw.githubusercontent.com/ioos/registry/master/uuid.csv&amp;#39;&lt;/span&gt;
+
+&lt;span class="n"&gt;df&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;pd&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;read_csv&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;url&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;index_col&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;header&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;names&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="s"&gt;&amp;#39;UUID&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;])&lt;/span&gt;
+&lt;span class="n"&gt;df&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="s"&gt;&amp;#39;UUID&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;df&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="s"&gt;&amp;#39;UUID&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;str&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;strip&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;div class="cell border-box-sizing text_cell rendered"&gt;
+&lt;div class="prompt input_prompt"&gt;
+&lt;/div&gt;
+&lt;div class="inner_cell"&gt;
+&lt;div class="text_cell_render border-box-sizing rendered_html"&gt;
+&lt;p&gt;The function below is similar to the one we used before.
+Note the same matching (&lt;code&gt;PropertyIsEqualTo&lt;/code&gt;),
+but different property name (&lt;code&gt;sys.siteuuid&lt;/code&gt; rather than &lt;code&gt;apiso:Keywords&lt;/code&gt;).&lt;/p&gt;
+&lt;p&gt;That is the key difference for the robustness of the search,
+keywords are not always defined and might return bogus matching.
+While UUID will always mean one RA.&lt;/p&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class="cell border-box-sizing code_cell rendered"&gt;
+&lt;div class="input"&gt;
+&lt;div class="prompt input_prompt"&gt;In&amp;nbsp;[5]:&lt;/div&gt;
+&lt;div class="inner_cell"&gt;
+    &lt;div class="input_area"&gt;
+&lt;div class="highlight-ipynb"&gt;&lt;pre class="ipynb"&gt;&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;owslib.fes&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="n"&gt;PropertyIsEqualTo&lt;/span&gt;
+
+&lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;query_ra&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;csw&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;uuid&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s"&gt;&amp;#39;B3EA8869-B726-4E39-898A-299E53ABBC98&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+    &lt;span class="n"&gt;q&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;PropertyIsEqualTo&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;propertyname&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s"&gt;&amp;#39;sys.siteuuid&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;literal&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s"&gt;&amp;#39;{&lt;/span&gt;&lt;span class="si"&gt;%s&lt;/span&gt;&lt;span class="s"&gt;}&amp;#39;&lt;/span&gt; &lt;span class="o"&gt;%&lt;/span&gt; &lt;span class="n"&gt;uuid&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="n"&gt;csw&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;getrecords2&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;constraints&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="n"&gt;q&lt;/span&gt;&lt;span class="p"&gt;],&lt;/span&gt; &lt;span class="n"&gt;maxrecords&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="mi"&gt;2000&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;esn&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s"&gt;&amp;#39;full&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="n"&gt;csw&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;/div&gt;
+                Here is what we got:
+                
+&lt;div class="cell border-box-sizing code_cell rendered"&gt;
+&lt;div class="input"&gt;
+&lt;div class="prompt input_prompt"&gt;In&amp;nbsp;[6]:&lt;/div&gt;
+&lt;div class="inner_cell"&gt;
+    &lt;div class="input_area"&gt;
+&lt;div class="highlight-ipynb"&gt;&lt;pre class="ipynb"&gt;&lt;span class="k"&gt;for&lt;/span&gt; &lt;span class="n"&gt;ra&lt;/span&gt; &lt;span class="ow"&gt;in&lt;/span&gt; &lt;span class="n"&gt;ioos_ras&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+    &lt;span class="k"&gt;try&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+        &lt;span class="n"&gt;uuid&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;df&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;ix&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="n"&gt;ra&lt;/span&gt;&lt;span class="p"&gt;][&lt;/span&gt;&lt;span class="s"&gt;&amp;#39;UUID&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;strip&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;#39;{&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;strip&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;#39;}&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+        &lt;span class="n"&gt;csw&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;query_ra&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;csw&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;uuid&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+        &lt;span class="n"&gt;ret&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;csw&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;results&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="s"&gt;&amp;#39;returned&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt;
+        &lt;span class="n"&gt;word&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;records&amp;#39;&lt;/span&gt; &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="n"&gt;ret&lt;/span&gt; &lt;span class="o"&gt;&amp;gt;&lt;/span&gt; &lt;span class="mi"&gt;1&lt;/span&gt; &lt;span class="k"&gt;else&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;record&amp;#39;&lt;/span&gt;
+        &lt;span class="k"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;{0:&amp;gt;8} has {1:&amp;gt;4} {2}&amp;quot;&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;format&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;ra&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;ret&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;word&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
+        &lt;span class="n"&gt;csw&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;records&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;clear&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+    &lt;span class="k"&gt;except&lt;/span&gt; &lt;span class="ne"&gt;KeyError&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+        &lt;span class="k"&gt;pass&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;div class="output_wrapper"&gt;
+&lt;div class="output"&gt;
+
+
+&lt;div class="output_area"&gt;&lt;div class="prompt"&gt;&lt;/div&gt;
+&lt;div class="output_subarea output_stream output_stdout output_text"&gt;
+&lt;pre&gt;
+    AOOS has   74 records
+   GCOOS has    8 records
+    GLOS has   20 records
+MARACOOS has  468 records
+  NANOOS has    8 records
+NERACOOS has 1109 records
+ PacIOOS has  192 records
+  SCCOOS has   23 records
+ SECOORA has  100 records
+
+&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;div class="cell border-box-sizing text_cell rendered"&gt;
+&lt;div class="prompt input_prompt"&gt;
+&lt;/div&gt;
+&lt;div class="inner_cell"&gt;
+&lt;div class="text_cell_render border-box-sizing rendered_html"&gt;
+&lt;p&gt;Compare the results above with &lt;code&gt;cell [6]&lt;/code&gt; &lt;a href="https://ioos.github.io/system-test/blog/2015/11/23/NGDC_CSW_QueryForIOOSRAs/"&gt;from before&lt;/a&gt;.  Note that now we got 192 for PacIOOS and 74 for AOOS now!&lt;/p&gt;
+&lt;p&gt;You can see the original notebook &lt;a href="https://www.wakari.io/sharing/bundle/emayorga/NGDC_CSW_QueryForIOOSRAs_UUID"&gt;here&lt;/a&gt;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class="cell border-box-sizing code_cell rendered"&gt;
+&lt;div class="input"&gt;
+&lt;div class="prompt input_prompt"&gt;In&amp;nbsp;[7]:&lt;/div&gt;
+&lt;div class="inner_cell"&gt;
+    &lt;div class="input_area"&gt;
+&lt;div class="highlight-ipynb"&gt;&lt;pre class="ipynb"&gt;&lt;span class="n"&gt;HTML&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;html&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;div class="output_wrapper"&gt;
+&lt;div class="output"&gt;
+
+
+&lt;div class="output_area"&gt;&lt;div class="prompt output_prompt"&gt;Out[7]:&lt;/div&gt;
+
+&lt;div class="output_html rendered_html output_subarea output_pyout"&gt;
+
+&lt;small&gt;
+&lt;p&gt; This post was written as an IPython notebook.  It is available for
+&lt;a href="http://ioos.github.com/system-test/downloads/
+notebooks/2015-12-07-NGDC_CSW_QueryForIOOSRAs_UUID.ipynb"&gt;download&lt;/a&gt;.  You can also try an interactive version on
+&lt;a href="http://mybinder.org/repo/ioos/system-test/"&gt;binder&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;&lt;/p&gt;
+
+&lt;/div&gt;
+
+&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;/div&gt;&lt;/p&gt;</summary></entry><entry><title>Catalog based search for the IOOS Regional Associations acronyms</title><link href="https://ioos.github.io/system-test/blog/2015/11/23/NGDC_CSW_QueryForIOOSRAs/" rel="alternate"></link><updated>2015-11-23T16:04:00-05:00</updated><author><name>IOOS</name></author><id>tag:https://ioos.github.io/system-test,2015-11-23:blog/2015/11/23/NGDC_CSW_QueryForIOOSRAs/</id><summary type="html">&lt;p&gt;
 &lt;div class="cell border-box-sizing text_cell rendered"&gt;
 &lt;div class="prompt input_prompt"&gt;
 &lt;/div&gt;
@@ -148,9 +345,7 @@ Let&amp;#39;s inspect one of SECOORA&amp;#39;s stations for example.&lt;/p&gt;
 &lt;div class="prompt input_prompt"&gt;In&amp;nbsp;[7]:&lt;/div&gt;
 &lt;div class="inner_cell"&gt;
     &lt;div class="input_area"&gt;
-&lt;div class="highlight-ipynb"&gt;&lt;pre class="ipynb"&gt;&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;utilities&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="n"&gt;get_coops_metadata&lt;/span&gt;
-
-&lt;span class="n"&gt;csw&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;query_ra&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;csw&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;SECOORA&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;div class="highlight-ipynb"&gt;&lt;pre class="ipynb"&gt;&lt;span class="n"&gt;csw&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;query_ra&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;csw&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s"&gt;&amp;#39;SECOORA&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
 &lt;span class="n"&gt;key&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;csw&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;records&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;keys&lt;/span&gt;&lt;span class="p"&gt;()[&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt;
 
 &lt;span class="k"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;key&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
@@ -359,6 +554,7 @@ id_usf.tas.ngwlms
 &lt;div class="text_cell_render border-box-sizing rendered_html"&gt;
 &lt;p&gt;This query is very simple, but also very powerful.
 We can quickly assess the data available for a certain Regional Association data with just a few line of code.&lt;/p&gt;
+&lt;p&gt;You can see the original notebook &lt;a href="https://www.wakari.io/sharing/bundle/emayorga/NGDC_CSW_QueryForIOOSRAs"&gt;here&lt;/a&gt;.&lt;/p&gt;
 &lt;/div&gt;
 &lt;/div&gt;
 &lt;/div&gt;
@@ -385,8 +581,8 @@ We can quickly assess the data available for a certain Regional Association data
 &lt;small&gt;
 &lt;p&gt; This post was written as an IPython notebook.  It is available for
 &lt;a href="http://ioos.github.com/system-test/downloads/
-notebooks/2015-11-23-NGDC_CSW_QueryForIOOSRAs.ipynb"&gt;download&lt;/a&gt; or
-&lt;a href="http://mybinder.org/repo/ioos/system-test/"&gt;run it on binder&lt;/a&gt;.&lt;/p&gt;
+notebooks/2015-11-23-NGDC_CSW_QueryForIOOSRAs.ipynb"&gt;download&lt;/a&gt;.  You can also try an interactive version on
+&lt;a href="http://mybinder.org/repo/ioos/system-test/"&gt;binder&lt;/a&gt;.&lt;/p&gt;
 &lt;p&gt;&lt;/p&gt;
 
 &lt;/div&gt;
@@ -9472,6 +9668,7 @@ iIiIiIhICVPjLiIiIiIiIlLC1LiLiIiIiIiIlLA/CRKxytd0nIAAAAAASUVORK5CYII=
 &lt;div class="text_cell_render border-box-sizing rendered_html"&gt;
 &lt;p&gt;Querying several catalogs like we did in this notebook is very slow.
 This approach should be used only to help to determine which catalog we can use after we know what type of data and service we need.&lt;/p&gt;
+&lt;p&gt;You can see the original IOOS System Test notebook &lt;a href="http://nbviewer.ipython.org/github/ioos/system-test/blob/master/Theme_1_Baseline/Scenario_1A_Model_Strings/Scenario_1A_Model_Strings.ipynb"&gt;here&lt;/a&gt;.&lt;/p&gt;
 &lt;/div&gt;
 &lt;/div&gt;
 &lt;/div&gt;
@@ -9498,8 +9695,8 @@ This approach should be used only to help to determine which catalog we can use 
 &lt;small&gt;
 &lt;p&gt; This post was written as an IPython notebook.  It is available for
 &lt;a href="http://ioos.github.com/system-test/downloads/
-notebooks/2015-11-09-Scenario_1A_Model_Strings.ipynb"&gt;download&lt;/a&gt; or
-&lt;a href="http://mybinder.org/repo/ioos/system-test/"&gt;run it on binder&lt;/a&gt;.&lt;/p&gt;
+notebooks/2015-11-09-Scenario_1A_Model_Strings.ipynb"&gt;download&lt;/a&gt;.  You can also try an interactive version on
+&lt;a href="http://mybinder.org/repo/ioos/system-test/"&gt;binder&lt;/a&gt;.&lt;/p&gt;
 &lt;p&gt;&lt;/p&gt;
 
 &lt;/div&gt;
@@ -15973,8 +16170,8 @@ Still, the catalog was successful in finding near real-time observations from su
 &lt;small&gt;
 &lt;p&gt; This post was written as an IPython notebook.  It is available for
 &lt;a href="http://ioos.github.com/system-test/downloads/
-notebooks/2015-10-26-HF_Radar_Currents_west_coast.ipynb"&gt;download&lt;/a&gt; or
-&lt;a href="http://mybinder.org/repo/ioos/system-test/"&gt;run it on binder&lt;/a&gt;.&lt;/p&gt;
+notebooks/2015-10-26-HF_Radar_Currents_west_coast.ipynb"&gt;download&lt;/a&gt;.  You can also try an interactive version on
+&lt;a href="http://mybinder.org/repo/ioos/system-test/"&gt;binder&lt;/a&gt;.&lt;/p&gt;
 &lt;p&gt;&lt;/p&gt;
 
 &lt;/div&gt;
@@ -18687,8 +18884,8 @@ There is a clear need to a better way to represent CF feature types in a single 
 &lt;small&gt;
 &lt;p&gt; This post was written as an IPython notebook.  It is available for
 &lt;a href="http://ioos.github.com/system-test/downloads/
-notebooks/2015-10-12-fetching_data.ipynb"&gt;download&lt;/a&gt; or
-&lt;a href="http://mybinder.org/repo/ioos/system-test/"&gt;run it on binder&lt;/a&gt;.&lt;/p&gt;
+notebooks/2015-10-12-fetching_data.ipynb"&gt;download&lt;/a&gt;.  You can also try an interactive version on
+&lt;a href="http://mybinder.org/repo/ioos/system-test/"&gt;binder&lt;/a&gt;.&lt;/p&gt;
 &lt;p&gt;&lt;/p&gt;
 
 &lt;/div&gt;
@@ -18698,48 +18895,4 @@ notebooks/2015-10-12-fetching_data.ipynb"&gt;download&lt;/a&gt; or
 &lt;/div&gt;
 &lt;/div&gt;
 
-&lt;/div&gt;&lt;/p&gt;</summary></entry><entry><title>Opening post</title><link href="https://ioos.github.io/system-test/blog/2015/09/28/OpeningPost/" rel="alternate"></link><updated>2015-09-28T23:09:00-04:00</updated><author><name>IOOS</name></author><id>tag:https://ioos.github.io/system-test,2015-09-28:blog/2015/09/28/OpeningPost/</id><summary type="html">&lt;p&gt;
-&lt;div class="cell border-box-sizing text_cell rendered"&gt;
-&lt;div class="prompt input_prompt"&gt;
-&lt;/div&gt;
-&lt;div class="inner_cell"&gt;
-&lt;div class="text_cell_render border-box-sizing rendered_html"&gt;
-&lt;p&gt;This blog is a &amp;quot;notebook digest&amp;quot; for all, but not only, notebooks created
-during the
-&lt;a href="http://www.ioos.noaa.gov/"&gt;IOOS&lt;/a&gt;
-&lt;a href="http://www.ioos.noaa.gov/data/dmac/welcome.html"&gt;DMAC&lt;/a&gt;
-&lt;a href="https://github.com/ioos/system-test/wiki"&gt;System Integration Test&lt;/a&gt; exercise.&lt;/p&gt;
-&lt;p&gt;The goal is to post readable, bite size, and
-&lt;a href="http://mybinder.org/"&gt;executable(!)&lt;/a&gt; notebooks.&lt;/p&gt;
-&lt;p&gt;Wait... Before we dive into the notebooks:&lt;/p&gt;
-&lt;h3 id="what-is-ioos-"&gt;What is IOOS?&lt;/h3&gt;
-&lt;p&gt;The US Integrated Ocean Observing System (IOOS)
-is a collaboration between Federal, State, Local, Academic and
-Commercial partners to manage and/or provide access to a wide
-range of ocean observing assets and data feeds, including &lt;em&gt;in-situ&lt;/em&gt;
-buoys, drifters, gliders, radar, satellite data, and numerical models
-and meet the needs of the ocean data community.&lt;/p&gt;
-&lt;h3 id="what-is-dmac-"&gt;What is DMAC?&lt;/h3&gt;
-&lt;p&gt;The Data Management and Communications (DMAC) is a subsystem of IOOS
-that provides the procedures, protocols and technology solutions to allow
-integration of the disparate observational data feeds within and amongst the
-regional associations and other IOOS data providers. Much of the data
-delivery and access technologies implemented by the DMAC subsystem are
-leveraged from the atmospheric community, where these technologies had become
-community practice.&lt;/p&gt;
-&lt;h3 id="what-is-system-integration-test-"&gt;What is System Integration Test?&lt;/h3&gt;
-&lt;p&gt;The System Integration Test (SIT) is an effort to stress-testing DMAC by
-evaluating how they scale across geographies, data types,
-very large datasets, and long term archives.&lt;/p&gt;
-&lt;p&gt;The SIT project has been organized into three themes&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;1) Baseline Assessment,&lt;/li&gt;
-&lt;li&gt;2) Extreme Events, and&lt;/li&gt;
-&lt;li&gt;3) Species Protection and Marine Habitat Classification.&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;Click in the binder badge below to load the notebook binder.
-You can browse, open, modify, and run any of the notebooks available here.&lt;/p&gt;
-&lt;p&gt;&lt;a href="http://mybinder.org/repo/ioos/system-test/"&gt;&lt;img src="http://mybinder.org/badge.svg" alt="Binder"&gt;&lt;/a&gt;&lt;/p&gt;
-&lt;/div&gt;
-&lt;/div&gt;
 &lt;/div&gt;&lt;/p&gt;</summary></entry></feed>

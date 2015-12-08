@@ -1910,9 +1910,7 @@ Let&#39;s inspect one of SECOORA&#39;s stations for example.</p>
 <div class="prompt input_prompt">In&nbsp;[7]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class="highlight-ipynb"><pre class="ipynb"><span class="kn">from</span> <span class="nn">utilities</span> <span class="kn">import</span> <span class="n">get_coops_metadata</span>
-
-<span class="n">csw</span> <span class="o">=</span> <span class="n">query_ra</span><span class="p">(</span><span class="n">csw</span><span class="p">,</span> <span class="s">&#39;SECOORA&#39;</span><span class="p">)</span>
+<div class="highlight-ipynb"><pre class="ipynb"><span class="n">csw</span> <span class="o">=</span> <span class="n">query_ra</span><span class="p">(</span><span class="n">csw</span><span class="p">,</span> <span class="s">&#39;SECOORA&#39;</span><span class="p">)</span>
 <span class="n">key</span> <span class="o">=</span> <span class="n">csw</span><span class="o">.</span><span class="n">records</span><span class="o">.</span><span class="n">keys</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
 
 <span class="k">print</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
@@ -2121,6 +2119,7 @@ id_usf.tas.ngwlms
 <div class="text_cell_render border-box-sizing rendered_html">
 <p>This query is very simple, but also very powerful.
 We can quickly assess the data available for a certain Regional Association data with just a few line of code.</p>
+<p>You can see the original notebook <a href="https://www.wakari.io/sharing/bundle/emayorga/NGDC_CSW_QueryForIOOSRAs">here</a>.</p>
 </div>
 </div>
 </div>
@@ -2147,8 +2146,8 @@ We can quickly assess the data available for a certain Regional Association data
 <small>
 <p> This post was written as an IPython notebook.  It is available for
 <a href="http://ioos.github.com/system-test/downloads/
-notebooks/2015-11-23-NGDC_CSW_QueryForIOOSRAs.ipynb">download</a> or
-<a href="http://mybinder.org/repo/ioos/system-test/">run it on binder</a>.</p>
+notebooks/2015-11-23-NGDC_CSW_QueryForIOOSRAs.ipynb">download</a>.  You can also try an interactive version on
+<a href="http://mybinder.org/repo/ioos/system-test/">binder</a>.</p>
 <p></p>
 
 </div>
@@ -2180,6 +2179,9 @@ notebooks/2015-11-23-NGDC_CSW_QueryForIOOSRAs.ipynb">download</a> or
     <h1>Recent Posts</h1>
     <ul id="recent_posts">
       <li class="post">
+          <a href="https://ioos.github.io/system-test/blog/2015/12/07/NGDC_CSW_QueryForIOOSRAs_UUID/">Catalog based search for the IOOS Regional Associations using UUID</a>
+      </li>
+      <li class="post">
           <a href="https://ioos.github.io/system-test/blog/2015/11/23/NGDC_CSW_QueryForIOOSRAs/">Catalog based search for the IOOS Regional Associations acronyms</a>
       </li>
       <li class="post">
@@ -2190,9 +2192,6 @@ notebooks/2015-11-23-NGDC_CSW_QueryForIOOSRAs.ipynb">download</a> or
       </li>
       <li class="post">
           <a href="https://ioos.github.io/system-test/blog/2015/10/12/fetching_data/">Fetching data from a CSW catalog</a>
-      </li>
-      <li class="post">
-          <a href="https://ioos.github.io/system-test/blog/2015/09/28/OpeningPost/">Opening post</a>
       </li>
     </ul>
   </section>
