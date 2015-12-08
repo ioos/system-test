@@ -1758,7 +1758,7 @@ jQuery(document).ready(function($) {
   <article class="hentry" role="article">
 <header>
       <h1 class="entry-title">Catalog based search for the IOOS Regional Associations using UUID</h1>
-      <p class="meta"><time datetime="2015-12-07T17:52:00" pubdate>Dec 07, 2015</time></p>
+      <p class="meta"><time datetime="2015-12-07T18:49:00" pubdate>Dec 07, 2015</time></p>
 </header>
 
   <div class="entry-content"><p>
@@ -1855,8 +1855,8 @@ While UUID will always mean one RA.</p>
     <div class="input_area">
 <div class="highlight-ipynb"><pre class="ipynb"><span class="kn">from</span> <span class="nn">owslib.fes</span> <span class="kn">import</span> <span class="n">PropertyIsEqualTo</span>
 
-<span class="k">def</span> <span class="nf">query_ra</span><span class="p">(</span><span class="n">csw</span><span class="p">,</span> <span class="n">uuid</span><span class="o">=</span><span class="s">&#39;B3EA8869-B726-4E39-898A-299E53ABBC98&#39;</span><span class="p">):</span>
-    <span class="n">q</span> <span class="o">=</span> <span class="n">PropertyIsEqualTo</span><span class="p">(</span><span class="n">propertyname</span><span class="o">=</span><span class="s">&#39;sys.siteuuid&#39;</span><span class="p">,</span> <span class="n">literal</span><span class="o">=</span><span class="s">&#39;{</span><span class="si">%s</span><span class="s">}&#39;</span> <span class="o">%</span> <span class="n">uuid</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">query_ra</span><span class="p">(</span><span class="n">csw</span><span class="p">,</span> <span class="n">uuid</span><span class="p">):</span>
+    <span class="n">q</span> <span class="o">=</span> <span class="n">PropertyIsEqualTo</span><span class="p">(</span><span class="n">propertyname</span><span class="o">=</span><span class="s">&#39;sys.siteuuid&#39;</span><span class="p">,</span> <span class="n">literal</span><span class="o">=</span><span class="s">&#39;</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">uuid</span><span class="p">)</span>
     <span class="n">csw</span><span class="o">.</span><span class="n">getrecords2</span><span class="p">(</span><span class="n">constraints</span><span class="o">=</span><span class="p">[</span><span class="n">q</span><span class="p">],</span> <span class="n">maxrecords</span><span class="o">=</span><span class="mi">2000</span><span class="p">,</span> <span class="n">esn</span><span class="o">=</span><span class="s">&#39;full&#39;</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">csw</span>
 </pre></div>
@@ -1875,7 +1875,7 @@ While UUID will always mean one RA.</p>
     <div class="input_area">
 <div class="highlight-ipynb"><pre class="ipynb"><span class="k">for</span> <span class="n">ra</span> <span class="ow">in</span> <span class="n">ioos_ras</span><span class="p">:</span>
     <span class="k">try</span><span class="p">:</span>
-        <span class="n">uuid</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">ix</span><span class="p">[</span><span class="n">ra</span><span class="p">][</span><span class="s">&#39;UUID&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s">&#39;{&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s">&#39;}&#39;</span><span class="p">)</span>
+        <span class="n">uuid</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">ix</span><span class="p">[</span><span class="n">ra</span><span class="p">][</span><span class="s">&#39;UUID&#39;</span><span class="p">]</span>
         <span class="n">csw</span> <span class="o">=</span> <span class="n">query_ra</span><span class="p">(</span><span class="n">csw</span><span class="p">,</span> <span class="n">uuid</span><span class="p">)</span>
         <span class="n">ret</span> <span class="o">=</span> <span class="n">csw</span><span class="o">.</span><span class="n">results</span><span class="p">[</span><span class="s">&#39;returned&#39;</span><span class="p">]</span>
         <span class="n">word</span> <span class="o">=</span> <span class="s">&#39;records&#39;</span> <span class="k">if</span> <span class="n">ret</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="k">else</span> <span class="s">&#39;record&#39;</span>
@@ -1964,7 +1964,7 @@ notebooks/2015-12-07-NGDC_CSW_QueryForIOOSRAs_UUID.ipynb">download</a>.  You can
   <span class="byline author vcard">
     Posted by <span class="fn">IOOS</span>
   </span>
-<time datetime="2015-12-07T17:52:00" pubdate>Dec 07, 2015</time></p><div class="sharing">
+<time datetime="2015-12-07T18:49:00" pubdate>Dec 07, 2015</time></p><div class="sharing">
   <a href="http://twitter.com/share" class="twitter-share-button" data-url="https://ioos.github.io/system-test/blog/2015/12/07/NGDC_CSW_QueryForIOOSRAs_UUID/" data-via="usioosgov" data-counturl="ioos.github.io/system-test/blog/2015/12/07/NGDC_CSW_QueryForIOOSRAs_UUID/" >Tweet</a>
     <div class="fb-like" data-send="true" data-width="450" data-show-faces="false"></div>
 </div>    </footer>
